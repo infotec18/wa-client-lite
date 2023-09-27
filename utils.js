@@ -1,5 +1,5 @@
-const { join } = require("node:path");
-const { existsSync, mkdirSync } = require("node:Fs")
+const { join } = require("path");
+const { existsSync, mkdirSync } = require("fs")
 
 const isMessageFromNow = (message) => {
     const messageDate = new Date(Number(`${message.timestamp}000`));

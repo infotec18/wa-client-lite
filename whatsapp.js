@@ -1,5 +1,5 @@
 const WAWebJS = require("whatsapp-web.js");
-const { messageParser, logWithDate, formatToOpusAudio, isMessageFromNow } = require("whatsapp-web.js");
+const { messageParser, logWithDate, formatToOpusAudio, isMessageFromNow } = require("./utils.js");
 const axios = require("axios");
 
 class WhatsappClient {

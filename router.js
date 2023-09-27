@@ -1,7 +1,7 @@
-import { Router } from "express";
-import WhatsappInstances from "./instances.js";
-import path from "node:path";
-import fs from "node:fs";
+const { Router } = require("express");
+const WhatsappInstances = require("./instances.js");
+const path = require("path");
+const fs = require("fs");
 
 class AppRouter {
     router = Router();
@@ -61,4 +61,4 @@ class AppRouter {
     }
 }
 
-export default AppRouter;
+module.exports = AppRouter;

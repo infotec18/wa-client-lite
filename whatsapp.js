@@ -1,6 +1,6 @@
-import WAWebJS from "whatsapp-web.js";
-import { messageParser, logWithDate, formatToOpusAudio, isMessageFromNow } from "./utils.js";
-import axios from "axios";
+const WAWebJS = require("whatsapp-web.js");
+const { messageParser, logWithDate, formatToOpusAudio, isMessageFromNow } = require("whatsapp-web.js");
+const axios = require("axios");
 
 class WhatsappClient {
     isAuthenticated = false;
@@ -138,4 +138,4 @@ class WhatsappClient {
     }
 }
 
-export default WhatsappClient;
+module.exports = WhatsappClient;

@@ -1,5 +1,5 @@
-import { config } from "dotenv";
-import WhatsappClient from "./whatsapp.js";
+const { config } = require("dotenv");
+const WhatsappClient = require("./whatsapp.js");
 
 config();
 
@@ -19,4 +19,4 @@ class WhatsappInstances {
     }
 }
 
-export default WhatsappInstances;
+module.exports = WhatsappInstances;

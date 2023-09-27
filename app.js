@@ -1,6 +1,6 @@
-import express from "express";
-import AppRouter from "./router.js";
-import { logWithDate, getAllEndpoints } from "./utils.js";
+const express = require("express");
+const AppRouter = require("./router.js");
+const { logWithDate, getAllEndpoints } = require("./utils.js");
 
 const app = express();
 const appRouter = new AppRouter();

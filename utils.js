@@ -1,5 +1,5 @@
-import { join } from "node:path";
-import { existsSync, mkdirSync } from "node:fs";
+const { join } = require("node:path");
+const { existsSync, mkdirSync } = require("node:Fs")
 
 const isMessageFromNow = (message) => {
     const messageDate = new Date(Number(`${message.timestamp}000`));
@@ -154,4 +154,4 @@ function getAllEndpoints(router, path) {
     return endpoints;
 }
 
-export { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints };
+module.exports = { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints };

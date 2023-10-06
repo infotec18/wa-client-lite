@@ -4,3 +4,4 @@ node_modules
 .wwebjs_cache
 files/*
 package-lock.json
+temp/*

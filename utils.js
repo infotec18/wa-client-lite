@@ -1,5 +1,10 @@
 const { join } = require("path");
-const { existsSync, mkdirSync } = require("fs")
+const { existsSync, readFileSync, unlinkSync } = require("fs");
+const { writeFile } = require("fs/promises");
+const { Readable } = require('stream');
+const { randomUUID } = require('crypto');
+const ffmpeg = require('fluent-ffmpeg');
+
 
 const isMessageFromNow = (message) => {
     const messageDate = new Date(Number(`${message.timestamp}000`));
@@ -58,10 +63,10 @@ async function messageParser(message) {
         const ARQUIVO_NOME = `message_${message.id._serialized}_file.${ext}`;
         const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
 
-        const filesPath = join(__dirname, '../../../', 'files');
+        const filesPath = join(__dirname, '/', 'files');
         const savePath = join(filesPath, ARQUIVO_NOME);
 
-        await promises.writeFile(savePath, mediaBuffer);
+        await writeFile(savePath, mediaBuffer);
 
         const succesfulWritedFile = existsSync(savePath);
 
@@ -86,8 +91,37 @@ async function messageParser(message) {
     return { ...serializedMessage, ARQUIVO: null }
 }
 
+function logWithDate(str, error) {
+    const dateSring = new Date().toLocaleString();
+
+    if (error) {
+        console.error(`${dateSring}: ${str}`, error);
+    } else {
+        console.log(`${dateSring}: ${str}`);
+    }
+}
+
+function getAllEndpoints(router, path) {
+    const endpoints = [];
+
+    if (router && router.stack) {
+        router.stack.forEach((layer) => {
+            if (layer.route) {
+                const subPath = layer.route.path;
+                const methods = Object.keys(layer.route.methods);
+
+                methods.forEach((method) => {
+                    endpoints.push(`${method.toUpperCase().padEnd(6, " ")} ${path}${subPath}`);
+                });
+            }
+        });
+    }
+
+    return endpoints;
+}
+
 async function formatToOpusAudio(file) {
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
         try {
             const tempPath = join(__dirname, "temp");
             if (!existsSync(tempPath)) {
@@ -123,35 +157,6 @@ async function formatToOpusAudio(file) {
             reject(err);
         }
     });
-}
-
-function logWithDate(str, error) {
-    const dateSring = new Date().toLocaleString();
-
-    if (error) {
-        console.error(`${dateSring}: ${str}`, error);
-    } else {
-        console.log(`${dateSring}: ${str}`);
-    }
-}
-
-function getAllEndpoints(router, path) {
-    const endpoints = [];
-
-    if (router && router.stack) {
-        router.stack.forEach((layer) => {
-            if (layer.route) {
-                const subPath = layer.route.path;
-                const methods = Object.keys(layer.route.methods);
-
-                methods.forEach((method) => {
-                    endpoints.push(`${method.toUpperCase().padEnd(6, " ")} ${path}${subPath}`);
-                });
-            }
-        });
-    }
-
-    return endpoints;
 }
 
 module.exports = { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints };

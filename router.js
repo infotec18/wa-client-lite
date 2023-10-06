@@ -80,10 +80,20 @@ class AppRouter {
 
     async getClientStatus(req, res) {
         try {
-            const instances = WhatsappInstances.instances.map(async i => ({ number: i.whatsappNumber, auth: i.isAuthenticated, status: await i.client.getState() }));
+            const clientsStatus = [];
+
+            for (const instance of WhatsappInstances.instances) {
+                const instanceData = ({
+                    number: instance.whatsappNumber,
+                    auth: instance.isAuthenticated,
+                    status: await instance.client.getState()
+                });
+
+                clientsStatus.push(instanceData)
+            }
 
             logWithDate("Get clients statuses success!");
-            res.status(200).json({ instances });
+            res.status(200).json({ instances: clientsStatus });
         } catch (err) {
             logWithDate("Get clients statuses failure => ", err);
             res.status(500).json({ message: "Something went wrong" });

@@ -40,7 +40,7 @@ class WhatsappClient {
             try {
                 const authResponse = await axios.post(`${this.requestURL}/auth/${this.whatsappNumber}`, {});
                 this.isAuthenticated = true;
-                logWithDate(`[${this.whatsappNumber}] Auth success => ${authResponse.data}`);
+                logWithDate(`[${this.whatsappNumber}] Auth success!`);
             } catch (err) {
                 logWithDate(`[${this.whatsappNumber}] Auth failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
@@ -50,7 +50,7 @@ class WhatsappClient {
             try {
                 const readyResponse = await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
                 this.isAuthenticated = true;
-                logWithDate(`[${this.whatsappNumber}] Ready success => ${readyResponse.data}`);
+                logWithDate(`[${this.whatsappNumber}] Ready success!`);
             } catch (err) {
                 logWithDate(`[${this.whatsappNumber}] Ready failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
@@ -79,7 +79,9 @@ class WhatsappClient {
             const messageFromNow = isMessageFromNow(message);
             const contactNumber = chat.id.user;
 
-            const isBlackListed = !typesBlackList.includes(message.type) && !numbersBlackList.includes(contactNumber);
+            const isBlackListed = typesBlackList.includes(message.type) && numbersBlackList.includes(contactNumber);
+
+            logWithDate(contactNumber, isBlackListed, messageFromNow);
 
             if (!chat.isGroup && messageFromNow && !message.isStatus && !isBlackListed) {
                 const parsedMessage = await messageParser(message);
@@ -119,7 +121,7 @@ class WhatsappClient {
     async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId }) {
         try {
             let formatedFile = file.toString("base64");
-            if (mimeType.includes("audio")) {
+            if (mimeType?.includes("audio")) {
                 formatedFile = (await formatToOpusAudio(file)).toString("base64");
             }
 
@@ -132,7 +134,6 @@ class WhatsappClient {
 
             return parsedMessage;
         } catch (err) {
-            console.error("Send file failure =>", err);
             logWithDate(`[${this.whatsappNumber}] Send file failure  =>`, err);
         }
     }

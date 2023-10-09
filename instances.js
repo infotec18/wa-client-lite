@@ -8,10 +8,10 @@ const { WHATSAPP_NUMBERS, REQUEST_URL } = process.env;
 const whatsappNumbers = WHATSAPP_NUMBERS.split(" ");
 
 class WhatsappInstances {
-    static instances = whatsappNumbers.map((number, index) => {
-        const clientId = `client-${index}`;
-
-        return new WhatsappClient(clientId, number, REQUEST_URL);
+    static instances = whatsappNumbers.map((str) => {
+        const [clientName, wppNumber] = str.split("_");
+        const requestURL = REQUEST_URL.replace(":clientName", clientName)
+        return new WhatsappClient(clientName, str, wppNumber, requestURL);
     });
 
     static find(number) {

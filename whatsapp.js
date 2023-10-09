@@ -3,12 +3,15 @@ const { messageParser, logWithDate, formatToOpusAudio, isMessageFromNow } = requ
 const axios = require("axios");
 
 class WhatsappClient {
+    clientName = "";
     isAuthenticated = false;
     whatsappNumber = null;
     requestURL = "";
 
-    constructor(clientId, whatsappNumber, requestURL) {
+    constructor(clientName, clientId, whatsappNumber, requestURL) {
+        this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
+
         this.requestURL = requestURL;
         this.buildClient(clientId, whatsappNumber);
         this.initialize();
@@ -81,8 +84,6 @@ class WhatsappClient {
 
             const isBlackListed = typesBlackList.includes(message.type) && numbersBlackList.includes(contactNumber);
 
-            logWithDate(contactNumber, isBlackListed, messageFromNow);
-
             if (!chat.isGroup && messageFromNow && !message.isStatus && !isBlackListed) {
                 const parsedMessage = await messageParser(message);
                 await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
@@ -135,6 +136,17 @@ class WhatsappClient {
             return parsedMessage;
         } catch (err) {
             logWithDate(`[${this.whatsappNumber}] Send file failure  =>`, err);
+        }
+    }
+
+    async getProfilePicture(number) {
+        try {
+            const pfpURL = await this.client.getProfilePicUrl(number + "@c.us");
+            logWithDate("Get PFP URL Success!");
+            return pfpURL
+        } catch (err) {
+            logWithDate("Get PFP URL err =>", err);
+            return null;
         }
     }
 }

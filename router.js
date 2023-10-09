@@ -12,6 +12,8 @@ class AppRouter {
         const upload = multer();
 
         this.router.post("/messages/:from/:to", upload.single("file"), this.sendMessage);
+
+        this.router.get("/avatars/:from/:to", this.getProfilePic);
         this.router.get("/files/:filename", this.getFile);
         this.router.get("", this.healthCheck);
         this.router.get("/clients", this.getClientStatus);
@@ -51,6 +53,26 @@ class AppRouter {
         }
     }
 
+    async getProfilePic(req, res) {
+        try {
+            const { from, to } = req.params;
+            console.log(from, to)
+
+            const findInstance = WhatsappInstances.find(from);
+
+            if (!findInstance) {
+                return res.status(404).json({ message: "Whatsapp number isn't found " });
+            }
+
+            const pfpURL = await findInstance.getProfilePicture(to);
+
+            res.status(200).json({ url: pfpURL });
+        } catch {
+            res.status(500).send();
+        }
+
+    }
+
     async getFile(req, res) {
         try {
             const fileName = req.params.filename;
@@ -84,6 +106,7 @@ class AppRouter {
 
             for (const instance of WhatsappInstances.instances) {
                 const instanceData = ({
+                    client: instance.clientName,
                     number: instance.whatsappNumber,
                     auth: instance.isAuthenticated,
                     status: await instance.client.getState()

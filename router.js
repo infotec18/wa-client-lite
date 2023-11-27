@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const multer = require('multer');
 const { logWithDate } = require("./utils.js");
+const { randomUUID } = require("crypto");
 
 class AppRouter {
     router = Router();
@@ -12,9 +13,9 @@ class AppRouter {
         const upload = multer();
 
         this.router.post("/messages/:from/:to", upload.single("file"), this.sendMessage);
-
-        this.router.get("/avatars/:from/:to", this.getProfilePic);
+        this.router.post("/files", upload.single("file"), this.uploadFile);
         this.router.get("/files/:filename", this.getFile);
+        this.router.get("/avatars/:from/:to", this.getProfilePic);
         this.router.get("", this.healthCheck);
         this.router.get("/clients", this.getClientStatus);
     }
@@ -119,6 +120,23 @@ class AppRouter {
             res.status(200).json({ instances: clientsStatus });
         } catch (err) {
             logWithDate("Get clients statuses failure => ", err);
+            res.status(500).json({ message: "Something went wrong" });
+        }
+    }
+
+    async uploadFile(req, res) {
+        try {
+            console.log(req.file);
+            const uuid = randomUUID();
+            const generatedName = `${uuid}_${req.file.originalname}`;
+            const filePath = path.join(__dirname, "/files", generatedName);
+
+            fs.writeFileSync(filePath, req.file.buffer);
+
+            res.status(201).json({ filename: generatedName });
+
+        } catch (err) {
+            logWithDate("Upload file failure => ", err);
             res.status(500).json({ message: "Something went wrong" });
         }
     }

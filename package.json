@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -18,5 +17,8 @@
   },
   "devDependencies": {
     "@types/axios": "^0.14.0"
+  },
+  "scripts": {
+    "start": "node app.js"
   }
 }

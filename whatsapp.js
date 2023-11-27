@@ -86,6 +86,7 @@ class WhatsappClient {
 
             if (!chat.isGroup && messageFromNow && !message.isStatus && !isBlackListed) {
                 const parsedMessage = await messageParser(message);
+
                 await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                 logWithDate(`[${this.whatsappNumber}] Message success => ${message.id._serialized}`);
             }

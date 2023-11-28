@@ -5,6 +5,7 @@ const fs = require("fs");
 const multer = require('multer');
 const { logWithDate } = require("./utils.js");
 const { randomUUID } = require("crypto");
+const mime = require('mime');
 
 class AppRouter {
     router = Router();
@@ -29,7 +30,7 @@ class AppRouter {
                 return res.status(404).json({ message: "Whatsapp number isn't found " });
             }
 
-            const { text, referenceId } = req.body;
+            const { text, referenceId, filename } = req.body;
             const file = req.file;
 
             if (file) {
@@ -41,6 +42,21 @@ class AppRouter {
                     caption: text,
                     quotedMessageId: referenceId
                 });
+
+                res.status(201).json(sentMessageWithFile);
+            } else if (filename) {
+                const filePath = path.join(__dirname, './files', filename)
+                const localfile = fs.readFileSync(filePath);
+                const mimeType = mime.getType(filePath);
+
+                const sentMessageWithFile = await findInstance.sendFile({
+                    file: localfile,
+                    fileName: filename,
+                    mimeType: mimeType,
+                    contact: to,
+                    caption: text,
+                    quotedMessageId: null
+                })
 
                 res.status(201).json(sentMessageWithFile);
             } else {
@@ -77,22 +93,21 @@ class AppRouter {
     async getFile(req, res) {
         try {
             const fileName = req.params.filename;
-            const filesPath = path.join(__dirname, "/files");
-            const searchFilePath = path.join(filesPath, fileName);
+            const searchFilePath = path.join(__dirname, "/files", fileName);
 
             if (!fs.existsSync(searchFilePath)) {
-                res.status(404).json({ message: "File not found" });
+                return res.status(404).json({ message: "File not found" });
             }
+            const mimeType = mime.getType(searchFilePath);
+            const file = fs.readFileSync(searchFilePath);
 
-            const readStream = fs.createReadStream(searchFilePath);
-
-            readStream.pipe(res);
-            readStream.on('end', () => readStream.close());
+            res.setHeader('Content-Type', mimeType);
+            res.end(file);
 
             logWithDate("Get file success =>", fileName);
         } catch (err) {
+            // Log and send error response
             logWithDate("Get file failure =>", err);
-
             res.status(500).json({ message: "Something went wrong" });
         }
     }
@@ -128,7 +143,9 @@ class AppRouter {
         try {
             console.log(req.file);
             const uuid = randomUUID();
-            const generatedName = `${uuid}_${req.file.originalname}`;
+            const filename = req.file.originalname.split(".")[0]
+            const ext = req.file.originalname.split(".")[1]
+            const generatedName = `${uuid}_${filename}.${ext}`;
             const filePath = path.join(__dirname, "/files", generatedName);
 
             fs.writeFileSync(filePath, req.file.buffer);

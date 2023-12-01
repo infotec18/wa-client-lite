@@ -6,6 +6,7 @@ const multer = require('multer');
 const { logWithDate } = require("./utils.js");
 const { randomUUID } = require("crypto");
 const mime = require('mime');
+const { default: axios } = require("axios");
 
 class AppRouter {
     router = Router();
@@ -15,6 +16,7 @@ class AppRouter {
 
         this.router.post("/messages/:from/:to", upload.single("file"), this.sendMessage);
         this.router.post("/files", upload.single("file"), this.uploadFile);
+        this.router.post("/mass-message/:from", upload.single("file"), this.sendMassMessages)
         this.router.get("/files/:filename", this.getFile);
         this.router.get("/avatars/:from/:to", this.getProfilePic);
         this.router.get("", this.healthCheck);
@@ -155,6 +157,40 @@ class AppRouter {
         } catch (err) {
             logWithDate("Upload file failure => ", err);
             res.status(500).json({ message: "Something went wrong" });
+        }
+    }
+
+    async sendMassMessages(req, res) {
+        const { file, body, params } = req;
+        const { contacts, text, mode, filename } = body;
+        const { from } = params;
+
+        const findInstance = WhatsappInstances.find(from);
+
+        res.status(200).send();
+
+        if (mode === "0") {
+            for (const contact of contacts.split(" ")) {
+                try {
+                    const parsedMessage = file ?
+                        await findInstance.sendFile({
+                            caption: text,
+                            contact,
+                            file: file.buffer,
+                            fileName: file.originalname,
+                            mimeType: file.mimeType
+                        })
+                        :
+                        await findInstance.sendText(contact, text);
+
+                    await axios.post(`${findInstance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${findInstance.whatsappNumber}/${contact}`, parsedMessage);
+                    const randomInterval = 1000 + (Math.random() * 500);
+                    await new Promise((res) => setTimeout(() => res(), randomInterval));
+
+                } catch (err) {
+                    logWithDate(`Send MM Failure =>`, err);
+                }
+            }
         }
     }
 }

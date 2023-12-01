@@ -75,7 +75,7 @@ class WhatsappClient {
 
     async onReceiveMessage(message) {
         try {
-            const typesBlackList = ["e2e_notification"];
+            const typesBlackList = ["e2e_notification", "notification_template", "call_log"];
             const numbersBlackList = [];
 
             const chat = await message.getChat();

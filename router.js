@@ -21,6 +21,7 @@ class AppRouter {
         this.router.get("/avatars/:from/:to", this.getProfilePic);
         this.router.get("", this.healthCheck);
         this.router.get("/clients", this.getClientStatus);
+        this.router.get("/validate-number/:from/:to", this.validateNumber);
     }
 
     async sendMessage(req, res) {
@@ -191,6 +192,21 @@ class AppRouter {
                     logWithDate(`Send MM Failure =>`, err);
                 }
             }
+        }
+    }
+
+    async validateNumber(req, res) {
+        try {
+
+            const { from, to } = req.params;
+
+            const findInstance = WhatsappInstances.find(from);
+            const isValid = await findInstance.validateNumber(to);
+
+            res.status(200).json({ isValid });
+        } catch (err) {
+            logWithDate("Validate number failure => ", err);
+            res.status(500).json({ message: "Something went wrong" });
         }
     }
 }

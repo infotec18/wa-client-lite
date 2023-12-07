@@ -82,7 +82,9 @@ class WhatsappClient {
             const messageFromNow = isMessageFromNow(message);
             const contactNumber = chat.id.user;
 
-            const isBlackListed = typesBlackList.includes(message.type) && numbersBlackList.includes(contactNumber);
+            const isBlackListedType = typesBlackList.includes(message.type);
+            const isBlackListedContact = numbersBlackList.includes(contactNumber);
+            const isBlackListed = isBlackListedType || isBlackListedContact;
 
             if (!chat.isGroup && messageFromNow && !message.isStatus && !isBlackListed) {
                 const parsedMessage = await messageParser(message);
@@ -108,9 +110,11 @@ class WhatsappClient {
 
     async sendText(contact, text, quotedMessageId) {
         try {
-            const chatId = `${contact}@c.us`;
+            const numberId = await this.client.getNumberId(contact);
+            const chatId = numberId && numberId._serialized;
             const sentMessage = await this.client.sendMessage(chatId, text, { quotedMessageId });
             const parsedMessage = await messageParser(sentMessage);
+            await this.client.getContactById()
 
             logWithDate(`[${this.whatsappNumber}] Send text success => ${parsedMessage.ID}`);
 
@@ -150,6 +154,12 @@ class WhatsappClient {
             logWithDate("Get PFP URL err =>", err);
             return null;
         }
+    }
+
+    async validateNumber(number) {
+        const chatId = await this.client.getNumberId(number);
+
+        return await this.client.isRegisteredUser(`${number}@c.us`);
     }
 }
 

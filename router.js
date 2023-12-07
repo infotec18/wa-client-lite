@@ -201,9 +201,9 @@ class AppRouter {
             const { from, to } = req.params;
 
             const findInstance = WhatsappInstances.find(from);
-            const isValid = await findInstance.validateNumber(to);
+            const validNumber = await findInstance.validateNumber(to);
 
-            res.status(200).json({ isValid });
+            res.status(200).json({ validNumber });
         } catch (err) {
             logWithDate("Validate number failure => ", err);
             res.status(500).json({ message: "Something went wrong" });

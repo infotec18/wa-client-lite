@@ -157,9 +157,15 @@ class WhatsappClient {
     }
 
     async validateNumber(number) {
-        const chatId = await this.client.getNumberId(number);
+        const isValid = await this.client.isRegisteredUser(`${number}@c.us`);
 
-        return await this.client.isRegisteredUser(`${number}@c.us`);
+        if (isValid) {
+            const chatId = await this.client.getNumberId(number);
+
+            return chatId.user;
+        }
+
+        return isValid;
     }
 }
 

@@ -1,5 +1,5 @@
 const { join } = require("path");
-const { existsSync, readFileSync, unlinkSync } = require("fs");
+const { existsSync, readFileSync, unlinkSync, mkdirSync } = require("fs");
 const { writeFile } = require("fs/promises");
 const { Readable } = require('stream');
 const { randomUUID } = require('crypto');

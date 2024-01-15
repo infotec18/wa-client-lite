@@ -53,14 +53,14 @@ class WhatsappClient {
         this.client.on("ready", async () => {
             try {
                 await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
-                this.isReady = true;
+                this.isR = true;
                 logWithDate(`[${this.whatsappNumber}] Ready success!`);
             } catch (err) {
                 logWithDate(`[${this.whatsappNumber}] Ready failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
         });
 
-        this.client.on("message_create", (message) => this.onReceiveMessage(message));
+        this.client.on("message", (message) => this.onReceiveMessage(message));
         this.client.on("message_ack", (status) => this.onReceiveMessageStatus(status));
     }
 

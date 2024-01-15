@@ -58,16 +58,14 @@ async function messageParser(message) {
     if (message.hasMedia) {
         const messageMedia = await message.downloadMedia();
         const mediaBuffer = Buffer.from(messageMedia.data, 'base64');
-        const extractedExt = messageMedia.mimetype.split('/')[1].split(';')[0];
-        const ext = extractedExt === 'plain' ? 'text' : extractedExt;
-        const ARQUIVO_NOME = `message_${message.id._serialized}_file.${ext}`;
+        const uuid = randomUUID();
+        const ARQUIVO_NOME = `${uuid}_${messageMedia.filename}`;
         const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
 
         const filesPath = join(__dirname, '/', 'files');
         const savePath = join(filesPath, ARQUIVO_NOME);
 
         await writeFile(savePath, mediaBuffer);
-
         const succesfulWritedFile = existsSync(savePath);
 
         if (succesfulWritedFile) {

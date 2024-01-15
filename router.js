@@ -115,21 +115,23 @@ class AppRouter {
         }
     }
 
-    async healthCheck(req, res) {
+    async healthCheck(_, res) {
         res.status(200).json({ online: true });
     }
 
-    async getClientStatus(req, res) {
+    async getClientStatus(_, res) {
         try {
             const clientsStatus = [];
 
             for (const instance of WhatsappInstances.instances) {
-                const instanceData = ({
+                const status = await instance.client.getState().catch(() => undefined);
+                const instanceData = {
                     client: instance.clientName,
                     number: instance.whatsappNumber,
                     auth: instance.isAuthenticated,
-                    status: await instance.client.getState()
-                });
+                    ready: instance.isReady,
+                    status
+                };
 
                 clientsStatus.push(instanceData)
             }
@@ -197,7 +199,6 @@ class AppRouter {
 
     async validateNumber(req, res) {
         try {
-
             const { from, to } = req.params;
 
             const findInstance = WhatsappInstances.find(from);

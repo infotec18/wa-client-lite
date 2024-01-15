@@ -5,6 +5,7 @@ const axios = require("axios");
 class WhatsappClient {
     clientName = "";
     isAuthenticated = false;
+    isReady = false;
     whatsappNumber = null;
     requestURL = "";
 
@@ -41,7 +42,7 @@ class WhatsappClient {
 
         this.client.on("authenticated", async () => {
             try {
-                const authResponse = await axios.post(`${this.requestURL}/auth/${this.whatsappNumber}`, {});
+                await axios.post(`${this.requestURL}/auth/${this.whatsappNumber}`, {});
                 this.isAuthenticated = true;
                 logWithDate(`[${this.whatsappNumber}] Auth success!`);
             } catch (err) {
@@ -51,25 +52,26 @@ class WhatsappClient {
 
         this.client.on("ready", async () => {
             try {
-                const readyResponse = await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
-                this.isAuthenticated = true;
+                await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
+                this.isReady = true;
                 logWithDate(`[${this.whatsappNumber}] Ready success!`);
             } catch (err) {
                 logWithDate(`[${this.whatsappNumber}] Ready failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
         });
 
-        this.client.on("message", (message) => this.onReceiveMessage(message));
+        this.client.on("message_create", (message) => this.onReceiveMessage(message));
         this.client.on("message_ack", (status) => this.onReceiveMessageStatus(status));
     }
 
     async initialize() {
         try {
-            const initResponse = await axios.put(`${this.requestURL}/init/${this.whatsappNumber}`);
-            this.client.initialize();
+            await axios.put(`${this.requestURL}/init/${this.whatsappNumber}`);
             logWithDate(`[${this.whatsappNumber}] Init success!`);
         } catch (err) {
             logWithDate(`[${this.whatsappNumber}] Init failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
+        } finally {
+            await this.client.initialize();
         }
     }
 
@@ -112,14 +114,17 @@ class WhatsappClient {
         try {
             const numberId = await this.client.getNumberId(contact);
             const chatId = numberId && numberId._serialized;
+
+            console.log(numberId, chatId);
+
             const sentMessage = await this.client.sendMessage(chatId, text, { quotedMessageId });
             const parsedMessage = await messageParser(sentMessage);
-            await this.client.getContactById()
 
             logWithDate(`[${this.whatsappNumber}] Send text success => ${parsedMessage.ID}`);
 
             return parsedMessage;
         } catch (err) {
+            console.error(err)
             logWithDate(`[${this.whatsappNumber}] Send text failure =>`, err);
         }
     }

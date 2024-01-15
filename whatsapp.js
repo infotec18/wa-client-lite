@@ -5,6 +5,7 @@ const axios = require("axios");
 class WhatsappClient {
     clientName = "";
     isAuthenticated = false;
+    isReady = false;
     whatsappNumber = null;
     requestURL = "";
 
@@ -41,7 +42,7 @@ class WhatsappClient {
 
         this.client.on("authenticated", async () => {
             try {
-                const authResponse = await axios.post(`${this.requestURL}/auth/${this.whatsappNumber}`, {});
+                await axios.post(`${this.requestURL}/auth/${this.whatsappNumber}`, {});
                 this.isAuthenticated = true;
                 logWithDate(`[${this.whatsappNumber}] Auth success!`);
             } catch (err) {
@@ -51,8 +52,8 @@ class WhatsappClient {
 
         this.client.on("ready", async () => {
             try {
-                const readyResponse = await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
-                this.isAuthenticated = true;
+                await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
+                this.isR = true;
                 logWithDate(`[${this.whatsappNumber}] Ready success!`);
             } catch (err) {
                 logWithDate(`[${this.whatsappNumber}] Ready failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
@@ -65,11 +66,12 @@ class WhatsappClient {
 
     async initialize() {
         try {
-            const initResponse = await axios.put(`${this.requestURL}/init/${this.whatsappNumber}`);
-            this.client.initialize();
+            await axios.put(`${this.requestURL}/init/${this.whatsappNumber}`);
             logWithDate(`[${this.whatsappNumber}] Init success!`);
         } catch (err) {
             logWithDate(`[${this.whatsappNumber}] Init failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
+        } finally {
+            await this.client.initialize();
         }
     }
 
@@ -82,7 +84,9 @@ class WhatsappClient {
             const messageFromNow = isMessageFromNow(message);
             const contactNumber = chat.id.user;
 
-            const isBlackListed = typesBlackList.includes(message.type) && numbersBlackList.includes(contactNumber);
+            const isBlackListedType = typesBlackList.includes(message.type);
+            const isBlackListedContact = numbersBlackList.includes(contactNumber);
+            const isBlackListed = isBlackListedType || isBlackListedContact;
 
             if (!chat.isGroup && messageFromNow && !message.isStatus && !isBlackListed) {
                 const parsedMessage = await messageParser(message);
@@ -108,7 +112,11 @@ class WhatsappClient {
 
     async sendText(contact, text, quotedMessageId) {
         try {
-            const chatId = `${contact}@c.us`;
+            const numberId = await this.client.getNumberId(contact);
+            const chatId = numberId && numberId._serialized;
+
+            console.log(numberId, chatId);
+
             const sentMessage = await this.client.sendMessage(chatId, text, { quotedMessageId });
             const parsedMessage = await messageParser(sentMessage);
 
@@ -116,6 +124,7 @@ class WhatsappClient {
 
             return parsedMessage;
         } catch (err) {
+            console.error(err)
             logWithDate(`[${this.whatsappNumber}] Send text failure =>`, err);
         }
     }
@@ -150,6 +159,18 @@ class WhatsappClient {
             logWithDate("Get PFP URL err =>", err);
             return null;
         }
+    }
+
+    async validateNumber(number) {
+        const isValid = await this.client.isRegisteredUser(`${number}@c.us`);
+
+        if (isValid) {
+            const chatId = await this.client.getNumberId(number);
+
+            return chatId.user;
+        }
+
+        return isValid;
     }
 }
 

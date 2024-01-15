@@ -21,6 +21,7 @@ class AppRouter {
         this.router.get("/avatars/:from/:to", this.getProfilePic);
         this.router.get("", this.healthCheck);
         this.router.get("/clients", this.getClientStatus);
+        this.router.get("/validate-number/:from/:to", this.validateNumber);
     }
 
     async sendMessage(req, res) {
@@ -114,21 +115,23 @@ class AppRouter {
         }
     }
 
-    async healthCheck(req, res) {
+    async healthCheck(_, res) {
         res.status(200).json({ online: true });
     }
 
-    async getClientStatus(req, res) {
+    async getClientStatus(_, res) {
         try {
             const clientsStatus = [];
 
             for (const instance of WhatsappInstances.instances) {
-                const instanceData = ({
+                const status = await instance.client.getState().catch(() => undefined);
+                const instanceData = {
                     client: instance.clientName,
                     number: instance.whatsappNumber,
                     auth: instance.isAuthenticated,
-                    status: await instance.client.getState()
-                });
+                    ready: instance.isReady,
+                    status
+                };
 
                 clientsStatus.push(instanceData)
             }
@@ -191,6 +194,20 @@ class AppRouter {
                     logWithDate(`Send MM Failure =>`, err);
                 }
             }
+        }
+    }
+
+    async validateNumber(req, res) {
+        try {
+            const { from, to } = req.params;
+
+            const findInstance = WhatsappInstances.find(from);
+            const validNumber = await findInstance.validateNumber(to);
+
+            res.status(200).json({ validNumber });
+        } catch (err) {
+            logWithDate("Validate number failure => ", err);
+            res.status(500).json({ message: "Something went wrong" });
         }
     }
 }

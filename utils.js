@@ -134,12 +134,14 @@ async function formatToOpusAudio(file) {
             });
 
             ffmpeg(readableStream)
-                .outputOptions('-c:a', 'libopus')
+                .outputOptions('-c:a', 'aac')
                 .outputOptions('-b:a', '64k')
                 .outputOptions('-vbr', 'on')
                 .outputOptions('-compression_level', '10')
                 .outputOptions('-frame_duration', '60')
                 .outputOptions('-application', 'voip')
+                .outputOptions('-strict', 'experimental') 
+                .outputOptions('-movflags', 'frag_keyframe+empty_moov')                
                 .output(savePath)
                 .on('end', () => {
                     const buffer = readFileSync(savePath);

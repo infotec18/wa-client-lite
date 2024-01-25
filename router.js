@@ -30,10 +30,10 @@ class AppRouter {
         try {
             // Criação de uma conexão com o banco de dados
             const createConnection = async () => await mysql.createConnection({
-                host: '172.22.197.92',
-                user: 'root',
-                password: '1nf0tec',
-                database: 'whatsapp-vollo',
+                host: process.env.DATABASE_HOST,
+                user: process.env.DATABASE_USER,
+                password: process.env.DATABASE_PASSWORD,
+                database: process.env.DATABASE_DATABASE,
             });
 
             const connection = await createConnection()

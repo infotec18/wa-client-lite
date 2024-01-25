@@ -144,10 +144,10 @@ class WhatsappClient {
     async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId, isAudio }) {
         try {
             let formatedFile = file.toString("base64");
-            console.log(isAudio);
-            console.log(mimeType);
 
-            if (isAudio) {
+            console.log(typeof isAudio, isAudio);
+
+            if (isAudio === "true") {
                 formatedFile = (await formatToOpusAudio(file)).toString("base64");
             }
 

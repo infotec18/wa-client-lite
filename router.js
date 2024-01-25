@@ -7,6 +7,7 @@ const { logWithDate, isUUID } = require("./utils.js");
 const { randomUUID } = require("crypto");
 const mime = require('mime');
 const { default: axios } = require("axios");
+const mysql = require('mysql2/promise');
 
 class AppRouter {
     router = Router();
@@ -22,6 +23,57 @@ class AppRouter {
         this.router.get("", this.healthCheck);
         this.router.get("/clients", this.getClientStatus);
         this.router.get("/validate-number/:from/:to", this.validateNumber);
+        this.router.get("/update-avatars", this.updateAvatars);
+    }
+
+    async updateAvatars(_, res) {
+        try {
+            // Criação de uma conexão com o banco de dados
+            const createConnection = async () => await mysql.createConnection({
+                host: '172.22.197.92',
+                user: 'root',
+                password: '1nf0tec',
+                database: 'whatsapp-vollo',
+            });
+
+            const connection = await createConnection()
+
+            const [rows] = await connection.execute(`
+                SELECT
+                    wa.CODIGO, 
+                    wcn.NUMERO
+                FROM w_atendimentos wa
+                LEFT JOIN w_clientes_numeros wcn ON wcn.CODIGO = wa.CODIGO_NUMERO
+                WHERE 
+                    wa.AVATAR_URL IS NULL 
+                AND 
+                    NOT wa.CONCLUIDO
+            `);
+
+            let counter = 0;
+
+            for (const row of rows) {
+                counter++;
+
+                const { CODIGO, NUMERO } = row;
+
+                const instance = WhatsappInstances.instances[0];
+                const AVATAR_URL = await instance.getProfilePicture(NUMERO);
+                console.log(`[${counter} of ${rows.length}]`, CODIGO, NUMERO, typeof AVATAR_URL === "string")
+
+                if (AVATAR_URL) {
+                    await connection.execute('UPDATE w_atendimentos SET AVATAR_URL = ? WHERE CODIGO = ?', [AVATAR_URL, CODIGO]);
+                }
+            }
+
+            // Fechar a conexão com o banco de dados
+            await connection.end();
+
+            res.status(200).json({ message: "Avatars atualizados com sucesso!" });
+        } catch (err) {
+            logWithDate("Erro ao atualizar avatars => ", err);
+            res.status(500).json({ message: "Algo deu errado ao atualizar avatars" });
+        }
     }
 
     async sendMessage(req, res) {

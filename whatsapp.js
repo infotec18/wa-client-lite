@@ -23,6 +23,8 @@ class WhatsappClient {
             authStrategy: new WAWebJS.LocalAuth({ clientId }),
             puppeteer: {
                 headless: true,
+                executablePath: process.env.CHROME_BIN || undefined,
+                browserWSEndpoint: process.env.CHROME_WS || undefined,
                 args: [
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
@@ -89,15 +91,15 @@ class WhatsappClient {
 
     async onReceiveMessage(message) {
         try {
-            const typesBlackList = ["e2e_notification", "notification_template", "call_log"];
-            const numbersBlackList = [];
+            const blockedTypes = ["e2e_notification", "notification_template", "call_log"];
+            const blockedNumbers = process.env.BLOCKED_NUMBERS ? process.env.BLOCKED_NUMBERS.split(" ") : [];
 
             const chat = await message.getChat();
             const messageFromNow = isMessageFromNow(message);
             const contactNumber = chat.id.user;
 
-            const isBlackListedType = typesBlackList.includes(message.type);
-            const isBlackListedContact = numbersBlackList.includes(contactNumber);
+            const isBlackListedType = blockedTypes.includes(message.type);
+            const isBlackListedContact = blockedNumbers.includes(contactNumber);
             const isBlackListed = isBlackListedType || isBlackListedContact;
 
             if (!chat.isGroup && messageFromNow && !message.isStatus && !isBlackListed) {
@@ -115,8 +117,12 @@ class WhatsappClient {
         try {
             const statuses = ["UNKNOWN_0", "PENDING", "RECEIVED", "READ", "UNKNOWN_4", "UNKNOWN_5"];
             const status = statuses[message.ack];
-            await axios.put(`${this.requestURL}/update_message/${message.id._serialized}`, { status });
-            logWithDate(`[${this.whatsappNumber}] Status success => ${status} ${message.id._serialized}`);
+
+            if ("PENDING RECEIVED READ".includes(status)) {
+                await axios.put(`${this.requestURL}/update_message/${message.id._serialized}`, { status });
+                logWithDate(`[${this.whatsappNumber}] Status success => ${status} ${message.id._serialized}`);
+            }
+
         } catch (err) {
             logWithDate(`[${this.whatsappNumber}] Status failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
         }
@@ -168,7 +174,6 @@ class WhatsappClient {
         try {
             const pfpURL = await this.client.getProfilePicUrl(number + "@c.us");
 
-            console.log(pfpURL);
             logWithDate("Get PFP URL Success!");
             return pfpURL
         } catch (err) {

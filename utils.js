@@ -166,7 +166,7 @@ async function formatToOpusAudio(file) {
         if (!existsSync(tempPath)) {
             mkdirSync(tempPath);
         }
-        const savePath = join(tempPath, `${randomUUID()}.opus`);
+        const savePath = join(tempPath, `${randomUUID()}.mp3`);
         const readableStream = new Readable({
             read() {
                 this.push(file);
@@ -176,14 +176,8 @@ async function formatToOpusAudio(file) {
 
         const ffmpeg = spawn('ffmpeg', [
             '-i', 'pipe:0',
-            '-c:a', 'libopus',
-            '-b:a', '64k',
-            '-vbr', 'on',
-            '-compression_level', '10',
-            '-frame_duration', '60',
-            '-application', 'voip',
-            '-strict', 'experimental',
-            '-movflags', 'frag_keyframe+empty_moov',
+            '-c:a', 'libmp3lame',
+            '-b:a', '128k',
             savePath
         ]);
 

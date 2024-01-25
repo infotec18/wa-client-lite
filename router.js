@@ -3,7 +3,7 @@ const WhatsappInstances = require("./instances.js");
 const path = require("path");
 const fs = require("fs");
 const multer = require('multer');
-const { logWithDate } = require("./utils.js");
+const { logWithDate, isUUID } = require("./utils.js");
 const { randomUUID } = require("crypto");
 const mime = require('mime');
 const { default: axios } = require("axios");
@@ -33,7 +33,7 @@ class AppRouter {
                 return res.status(404).json({ message: "Whatsapp number isn't found " });
             }
 
-            const { text, referenceId, filename } = req.body;
+            const { text, referenceId, filename, isAudio } = req.body;
             const file = req.file;
 
             if (file) {
@@ -43,18 +43,22 @@ class AppRouter {
                     mimeType: file.mimetype,
                     contact: to,
                     caption: text,
-                    quotedMessageId: referenceId
+                    quotedMessageId: referenceId,
+                    isAudio
                 });
 
                 res.status(201).json(sentMessageWithFile);
             } else if (filename) {
+
                 const filePath = path.join(__dirname, './files', filename)
                 const localfile = fs.readFileSync(filePath);
                 const mimeType = mime.getType(filePath);
 
+                const fileNameWithoutUUID = filename.split("_").slice(1).join("_");
+
                 const sentMessageWithFile = await findInstance.sendFile({
                     file: localfile,
-                    fileName: filename,
+                    fileName: fileNameWithoutUUID,
                     mimeType: mimeType,
                     contact: to,
                     caption: text,
@@ -103,7 +107,10 @@ class AppRouter {
             }
             const mimeType = mime.getType(searchFilePath);
             const file = fs.readFileSync(searchFilePath);
+            const haveUUID = isUUID(fileName.split("_")[0])
+            const fileNameWithoutUUID = haveUUID ? fileName.split("_").slice(1).join("_") : fileName;
 
+            res.setHeader('Content-Disposition', `inline; filename="${fileNameWithoutUUID}"`);
             res.setHeader('Content-Type', mimeType);
             res.end(file);
 
@@ -148,8 +155,8 @@ class AppRouter {
         try {
             console.log(req.file);
             const uuid = randomUUID();
-            const filename = req.file.originalname.split(".")[0]
-            const ext = req.file.originalname.split(".")[1]
+            const filename = decodeURIComponent(req.file.originalname).split(".")[0]
+            const ext = decodeURIComponent(req.file.originalname).split(".")[1]
             const generatedName = `${uuid}_${filename}.${ext}`;
             const filePath = path.join(__dirname, "/files", generatedName);
 
@@ -165,7 +172,7 @@ class AppRouter {
 
     async sendMassMessages(req, res) {
         const { file, body, params } = req;
-        const { contacts, text, mode, filename } = body;
+        const { contacts, text, mode } = body;
         const { from } = params;
 
         const findInstance = WhatsappInstances.find(from);
@@ -175,12 +182,17 @@ class AppRouter {
         if (mode === "0") {
             for (const contact of contacts.split(" ")) {
                 try {
+                    const haveUUID = isUUID(file.originalname.split("_")[0])
+                    const fileName = haveUUID ? file.originalname.split("_").slice(1).join("_") : file.originalname;
+
+                    console.log(file.originalname, fileName);
+
                     const parsedMessage = file ?
                         await findInstance.sendFile({
                             caption: text,
                             contact,
                             file: file.buffer,
-                            fileName: file.originalname,
+                            fileName: fileName,
                             mimeType: file.mimeType
                         })
                         :

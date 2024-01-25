@@ -20,7 +20,19 @@ class WhatsappClient {
 
     buildClient(clientId) {
         this.client = new WAWebJS.Client({
-            authStrategy: new WAWebJS.LocalAuth({ clientId })
+            authStrategy: new WAWebJS.LocalAuth({ clientId }),
+            puppeteer: {
+                headless: true,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-accelerated-2d-canvas",
+                    "--no-first-run",
+                    "--no-zygote",
+                    "--disable-gpu",
+                ]
+            }
         });
 
         this.client.on("qr", async (qr) => {
@@ -129,17 +141,19 @@ class WhatsappClient {
         }
     }
 
-    async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId }) {
+    async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId, isAudio }) {
         try {
-            console.log(contact, file, mimeType, fileName, caption, quotedMessageId)
             let formatedFile = file.toString("base64");
-            if (mimeType?.includes("audio")) {
+            console.log(isAudio);
+            console.log(mimeType);
+
+            if (isAudio) {
                 formatedFile = (await formatToOpusAudio(file)).toString("base64");
             }
 
             const chatId = `${contact}@c.us`;
             const media = new WAWebJS.MessageMedia(mimeType, formatedFile, fileName);
-            const sentMessage = await this.client.sendMessage(chatId, media, { caption, quotedMessageId });
+            const sentMessage = await this.client.sendMessage(chatId, media, { caption, quotedMessageId, sendAudioAsVoice: !!isAudio });
             const parsedMessage = await messageParser(sentMessage);
 
             logWithDate(`[${this.whatsappNumber}] Send file success => ${parsedMessage.ID}`);
@@ -153,6 +167,8 @@ class WhatsappClient {
     async getProfilePicture(number) {
         try {
             const pfpURL = await this.client.getProfilePicUrl(number + "@c.us");
+
+            console.log(pfpURL);
             logWithDate("Get PFP URL Success!");
             return pfpURL
         } catch (err) {

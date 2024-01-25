@@ -3,6 +3,7 @@ const { existsSync, readFileSync, unlinkSync, mkdirSync } = require("fs");
 const { writeFile } = require("fs/promises");
 const { Readable } = require('stream');
 const { randomUUID } = require('crypto');
+const { spawn } = require('child_process');
 const ffmpeg = require('fluent-ffmpeg');
 
 
@@ -118,7 +119,7 @@ function getAllEndpoints(router, path) {
     return endpoints;
 }
 
-async function formatToOpusAudio(file) {
+/* async function formatToOpusAudio(file) {
     return await new Promise((resolve, reject) => {
         try {
             const tempPath = join(__dirname, "temp");
@@ -140,8 +141,8 @@ async function formatToOpusAudio(file) {
                 .outputOptions('-compression_level', '10')
                 .outputOptions('-frame_duration', '60')
                 .outputOptions('-application', 'voip')
-                .outputOptions('-strict', 'experimental') 
-                .outputOptions('-movflags', 'frag_keyframe+empty_moov')                
+                .outputOptions('-strict', 'experimental')
+                .outputOptions('-movflags', 'frag_keyframe+empty_moov')
                 .output(savePath)
                 .on('end', () => {
                     const buffer = readFileSync(savePath);
@@ -157,6 +158,58 @@ async function formatToOpusAudio(file) {
             reject(err);
         }
     });
+} */
+
+async function formatToOpusAudio(file) {
+    try {
+        const tempPath = join(__dirname, "temp");
+        if (!existsSync(tempPath)) {
+            mkdirSync(tempPath);
+        }
+        const savePath = join(tempPath, `${randomUUID()}.opus`);
+        const readableStream = new Readable({
+            read() {
+                this.push(file);
+                this.push(null);
+            }
+        });
+
+        const ffmpeg = spawn('ffmpeg', [
+            '-i', 'pipe:0',
+            '-c:a', 'libopus',
+            '-b:a', '64k',
+            '-vbr', 'on',
+            '-compression_level', '10',
+            '-frame_duration', '60',
+            '-application', 'voip',
+            '-strict', 'experimental',
+            '-movflags', 'frag_keyframe+empty_moov',
+            savePath
+        ]);
+
+        readableStream.pipe(ffmpeg.stdin);
+
+        return new Promise((resolve, reject) => {
+            ffmpeg.on('close', (code) => {
+                if (code === 0) {
+                    resolve(readFileSync(savePath));
+                } else {
+                    reject(`Erro ao converter para Opus, código de saída: ${code}`);
+                }
+            });
+
+            ffmpeg.on('error', (err) => {
+                reject(err);
+            });
+        });
+    } catch (err) {
+        throw err;
+    }
 }
 
-module.exports = { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints };
+function isUUID(str) {
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    return uuidRegex.test(str);
+}
+
+module.exports = { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID };

@@ -151,8 +151,6 @@ class WhatsappClient {
         try {
             let formatedFile = file.toString("base64");
 
-            console.log(typeof isAudio, isAudio);
-
             if (isAudio === "true") {
                 formatedFile = (await formatToOpusAudio(file)).toString("base64");
             }
@@ -183,15 +181,9 @@ class WhatsappClient {
     }
 
     async validateNumber(number) {
-        const isValid = await this.client.isRegisteredUser(`${number}@c.us`);
+        const isValid = await this.client.getNumberId(number);
 
-        if (isValid) {
-            const chatId = await this.client.getNumberId(number);
-
-            return chatId.user;
-        }
-
-        return isValid;
+        return !!isValid && isValid.user;
     }
 }
 

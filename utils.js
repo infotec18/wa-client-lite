@@ -119,47 +119,6 @@ function getAllEndpoints(router, path) {
     return endpoints;
 }
 
-/* async function formatToOpusAudio(file) {
-    return await new Promise((resolve, reject) => {
-        try {
-            const tempPath = join(__dirname, "temp");
-            if (!existsSync(tempPath)) {
-                mkdirSync(tempPath);
-            }
-            const savePath = join(tempPath, `${randomUUID()}.ogg`);
-            const readableStream = new Readable({
-                read() {
-                    this.push(file);
-                    this.push(null);
-                }
-            });
-
-            ffmpeg(readableStream)
-                .outputOptions('-c:a', 'aac')
-                .outputOptions('-b:a', '64k')
-                .outputOptions('-vbr', 'on')
-                .outputOptions('-compression_level', '10')
-                .outputOptions('-frame_duration', '60')
-                .outputOptions('-application', 'voip')
-                .outputOptions('-strict', 'experimental')
-                .outputOptions('-movflags', 'frag_keyframe+empty_moov')
-                .output(savePath)
-                .on('end', () => {
-                    const buffer = readFileSync(savePath);
-
-                    unlinkSync(savePath);
-                    resolve(buffer);
-                })
-                .on('error', (err) => {
-                    reject(err);
-                })
-                .run();
-        } catch (err) {
-            reject(err);
-        }
-    });
-} */
-
 async function formatToOpusAudio(file) {
     try {
         const tempPath = join(__dirname, "temp");
@@ -201,9 +160,17 @@ async function formatToOpusAudio(file) {
     }
 }
 
+function decodeSafeURI(uri) {
+    try {
+        return decodeURI(uri);
+    } catch (error) {
+        return uri;
+    }
+}
+
 function isUUID(str) {
     const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     return uuidRegex.test(str);
 }
 
-module.exports = { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID };
+module.exports = { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI };

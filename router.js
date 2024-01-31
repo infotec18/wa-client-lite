@@ -3,7 +3,7 @@ const WhatsappInstances = require("./instances.js");
 const path = require("path");
 const fs = require("fs");
 const multer = require('multer');
-const { logWithDate, isUUID } = require("./utils.js");
+const { logWithDate, isUUID, decodeSafeURI } = require("./utils.js");
 const { randomUUID } = require("crypto");
 const mime = require('mime');
 const { default: axios } = require("axios");
@@ -58,8 +58,9 @@ class AppRouter {
                 const { CODIGO, NUMERO } = row;
 
                 const instance = WhatsappInstances.instances[0];
-                const AVATAR_URL = await instance.getProfilePicture(NUMERO);
-                console.log(`[${counter} of ${rows.length}]`, CODIGO, NUMERO, typeof AVATAR_URL === "string")
+                const validNumber = NUMERO && await instance.validateNumber(NUMERO);
+                const AVATAR_URL = validNumber && await instance.getProfilePicture(validNumber);
+                console.log(`[${counter} of ${rows.length}]`, CODIGO, NUMERO, validNumber, typeof AVATAR_URL === "string");
 
                 if (AVATAR_URL) {
                     await connection.execute('UPDATE w_atendimentos SET AVATAR_URL = ? WHERE CODIGO = ?', [AVATAR_URL, CODIGO]);
@@ -91,7 +92,7 @@ class AppRouter {
             if (file) {
                 const sentMessageWithFile = await findInstance.sendFile({
                     file: file.buffer,
-                    fileName: file.originalname,
+                    fileName: decodeSafeURI(file.originalname),
                     mimeType: file.mimetype,
                     contact: to,
                     caption: text,

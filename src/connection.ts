@@ -1,8 +1,7 @@
 import "dotenv/config";
-import { createConnection } from "mysql2/promise";
-import { connectionProps } from "./types";
+import { ConnectionOptions, createConnection } from "mysql2/promise";
 
-const connectionProps: connectionProps = {
+const connectionProps: ConnectionOptions = {
     host: process.env.DATABASE_HOST!,
     user: process.env.DATABASE_USER!,
     password: process.env.DATABASE_PASSWORD!,

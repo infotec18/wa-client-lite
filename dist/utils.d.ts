@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { Connection } from "mysql2/promise";
 import WAWebJS from "whatsapp-web.js";
 import { Router } from "express";
@@ -30,7 +31,7 @@ declare function messageParser(message: WAWebJS.Message): Promise<{
 } | null>;
 declare function logWithDate(str: string, error?: any): void;
 declare function getAllEndpoints(router: Router, path: string): string[];
-declare function formatToOpusAudio(file: any): Promise<unknown>;
+declare function formatToOpusAudio(file: Buffer): Promise<Buffer>;
 declare function decodeSafeURI(uri: string): string;
 declare function isUUID(str: string): boolean;
 declare function getOrCreateContact(connection: Connection, number: string, name: string): Promise<number>;

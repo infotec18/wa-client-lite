@@ -2,7 +2,9 @@ import axios from "axios";
 import { Connection, ConnectionOptions, FieldPacket, ResultSetHeader, RowDataPacket, createConnection } from "mysql2/promise";
 import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
-import { SendFileOptions } from "./types";
+import { DBAutomaticMessage, SendFileOptions } from "./types";
+import buildAutomaticMessage from "./build-automatic-messages";
+import getDBConnection from "./connection";
 
 class WhatsappInstance {
     public readonly requestURL: string;
@@ -13,6 +15,8 @@ class WhatsappInstance {
     public isReady: boolean = false;
     public connection: Connection | null = null;
     public blockedNumbers: Array<string> = [];
+    public autoMessageCounter: Map<string, Record<number, number>> = new Map();
+    private readonly autoMessageCallbacks: Array<(message: WAWebJS.Message) => void> = [];
 
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions) {
         this.clientName = clientName;
@@ -38,14 +42,12 @@ class WhatsappInstance {
         });
 
         createConnection(connection)
-            .then(async (res) => {
-                this.connection = res;
-                const [rows]: [RowDataPacket[], FieldPacket[]] = await this.connection.execute(`SELECT * FROM blocked_numbers WHERE instance_number = ?`, [this.whatsappNumber]);
-                this.blockedNumbers = rows.map((r) => r.blocked_number);
-            })
-            .catch(() => logWithDate(`No connection for instance ${this.clientName}_${this.whatsappNumber}`));
+            .then(async (res) => { this.connection = res })
+            .catch((err) => logWithDate(`No connection for instance ${this.clientName}_${this.whatsappNumber}`, err));
 
 
+        this.buildBlockedNumbers();
+        this.buildAutomaticMessages();
         this.buildClient();
         this.initialize();
     }
@@ -92,7 +94,33 @@ class WhatsappInstance {
         this.client.on("message_ack", (status) => this.onReceiveMessageStatus(status));
     }
 
-    async initialize() {
+    private async buildBlockedNumbers() {
+        const connection = await getDBConnection();
+
+        const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(`SELECT * FROM blocked_numbers WHERE instance_number = ?`, [this.whatsappNumber]);
+        this.blockedNumbers = rows.map((r) => r.blocked_number);
+
+        connection.end();
+        connection.destroy();
+    }
+
+    private async buildAutomaticMessages() {
+        const connection = await getDBConnection();
+
+        const SELECT_BOTS_QUERY = "SELECT * FROM automatic_messages WHERE instance_number = ?";
+        const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_BOTS_QUERY, [this.whatsappNumber]);
+        const autoMessages = rows as DBAutomaticMessage[];
+
+        autoMessages.forEach(am => {
+            const callback = buildAutomaticMessage(this, am);
+            this.autoMessageCallbacks.push(callback);
+        })
+
+        connection.end();
+        connection.destroy();
+    }
+
+    public async initialize() {
         try {
             await axios.put(`${this.requestURL}/init/${this.whatsappNumber}`);
             logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Init success!`);
@@ -103,7 +131,7 @@ class WhatsappInstance {
         }
     }
 
-    async onReceiveMessage(message: WAWebJS.Message) {
+    public async onReceiveMessage(message: WAWebJS.Message) {
         try {
             const blockedTypes = ["e2e_notification", "notification_template", "call_log"];
             const fromNow = isMessageFromNow(message);
@@ -114,6 +142,10 @@ class WhatsappInstance {
             const isBlackListedType = blockedTypes.includes(message.type);
             const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
             const isBlackListed = isBlackListedType || isBlackListedContact;
+
+            this.autoMessageCallbacks.forEach(cb => {
+                cb(message);
+            });
 
             if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                 const parsedMessage = await messageParser(message);
@@ -129,7 +161,7 @@ class WhatsappInstance {
         }
     }
 
-    async onReceiveMessageStatus(message: WAWebJS.Message) {
+    public async onReceiveMessageStatus(message: WAWebJS.Message) {
         try {
             const status = ["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][message.ack] || "ERROR";
 
@@ -142,7 +174,7 @@ class WhatsappInstance {
     }
 
 
-    async loadMessages() {
+    public async loadMessages() {
         try {
             const chats = (await this.client.getChats()).filter((c) => !c.isGroup);
 
@@ -210,7 +242,7 @@ class WhatsappInstance {
     }
 
 
-    async sendText(contact: string, text: string, quotedMessageId?: string) {
+    public async sendText(contact: string, text: string, quotedMessageId?: string) {
         try {
             const numberId = await this.client.getNumberId(contact);
             const chatId = numberId && numberId._serialized;
@@ -231,7 +263,7 @@ class WhatsappInstance {
         }
     }
 
-    async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId, isAudio }: SendFileOptions) {
+    public async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId, isAudio }: SendFileOptions) {
         try {
             let formatedFile: unknown & any = file.toString("base64");
 
@@ -254,7 +286,7 @@ class WhatsappInstance {
         }
     }
 
-    async getProfilePicture(number: string) {
+    public async getProfilePicture(number: string) {
         try {
             const pfpURL = await this.client.getProfilePicUrl(number + "@c.us");
             logWithDate("Get PFP URL Success!");
@@ -266,7 +298,7 @@ class WhatsappInstance {
         }
     }
 
-    async validateNumber(number: string) {
+    public async validateNumber(number: string) {
         const isValid = await this.client.getNumberId(number);
 
         return !!isValid && isValid.user;

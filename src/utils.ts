@@ -93,7 +93,7 @@ function getAllEndpoints(router: Router, path: string) {
     return endpoints;
 }
 
-async function formatToOpusAudio(file: any) {
+async function formatToOpusAudio(file: Buffer): Promise<Buffer> {
     try {
         const tempPath = join(__dirname, "temp");
 

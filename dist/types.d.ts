@@ -20,10 +20,14 @@ export interface DBWhatsappInstance {
     readonly db_pass: string;
     readonly db_name: string;
 }
-export interface connectionProps {
-    host: string;
-    user: string;
-    password: string;
-    database: string;
+export interface DBAutomaticMessage {
+    readonly id: number;
+    readonly instance_number: string;
+    readonly text: string;
+    readonly attachment: string;
+    readonly attachment_type: AttachmentType;
+    readonly send_condition: string;
+    readonly send_max_times: number;
 }
+export type AttachmentType = "contact" | "document" | "image" | "video" | "audio" | "voice" | "location" | null;
 //# sourceMappingURL=types.d.ts.map

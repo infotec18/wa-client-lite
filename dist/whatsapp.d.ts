@@ -10,8 +10,12 @@ declare class WhatsappInstance {
     isReady: boolean;
     connection: Connection | null;
     blockedNumbers: Array<string>;
+    autoMessageCounter: Map<string, Record<number, number>>;
+    private readonly autoMessageCallbacks;
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions);
     private buildClient;
+    private buildBlockedNumbers;
+    private buildAutomaticMessages;
     initialize(): Promise<void>;
     onReceiveMessage(message: WAWebJS.Message): Promise<void>;
     onReceiveMessageStatus(message: WAWebJS.Message): Promise<void>;

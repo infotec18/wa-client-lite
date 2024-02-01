@@ -39,12 +39,16 @@ const axios_1 = __importDefault(require("axios"));
 const promise_1 = require("mysql2/promise");
 const whatsapp_web_js_1 = __importStar(require("whatsapp-web.js"));
 const utils_1 = require("./utils");
+const build_automatic_messages_1 = __importDefault(require("./build-automatic-messages"));
+const connection_1 = __importDefault(require("./connection"));
 class WhatsappInstance {
     constructor(clientName, whatsappNumber, requestURL, connection) {
         this.isAuthenticated = false;
         this.isReady = false;
         this.connection = null;
         this.blockedNumbers = [];
+        this.autoMessageCounter = new Map();
+        this.autoMessageCallbacks = [];
         this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
         this.requestURL = requestURL;
@@ -66,12 +70,10 @@ class WhatsappInstance {
             }
         });
         (0, promise_1.createConnection)(connection)
-            .then((res) => __awaiter(this, void 0, void 0, function* () {
-            this.connection = res;
-            const [rows] = yield this.connection.execute(`SELECT * FROM blocked_numbers WHERE instance_number = ?`, [this.whatsappNumber]);
-            this.blockedNumbers = rows.map((r) => r.blocked_number);
-        }))
-            .catch(() => (0, utils_1.logWithDate)(`No connection for instance ${this.clientName}_${this.whatsappNumber}`));
+            .then((res) => __awaiter(this, void 0, void 0, function* () { this.connection = res; }))
+            .catch((err) => (0, utils_1.logWithDate)(`No connection for instance ${this.clientName}_${this.whatsappNumber}`, err));
+        this.buildBlockedNumbers();
+        this.buildAutomaticMessages();
         this.buildClient();
         this.initialize();
     }
@@ -114,6 +116,29 @@ class WhatsappInstance {
         this.client.on("message", (message) => this.onReceiveMessage(message));
         this.client.on("message_ack", (status) => this.onReceiveMessageStatus(status));
     }
+    buildBlockedNumbers() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const connection = yield (0, connection_1.default)();
+            const [rows] = yield connection.execute(`SELECT * FROM blocked_numbers WHERE instance_number = ?`, [this.whatsappNumber]);
+            this.blockedNumbers = rows.map((r) => r.blocked_number);
+            connection.end();
+            connection.destroy();
+        });
+    }
+    buildAutomaticMessages() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const connection = yield (0, connection_1.default)();
+            const SELECT_BOTS_QUERY = "SELECT * FROM automatic_messages WHERE instance_number = ?";
+            const [rows] = yield connection.execute(SELECT_BOTS_QUERY, [this.whatsappNumber]);
+            const autoMessages = rows;
+            autoMessages.forEach(am => {
+                const callback = (0, build_automatic_messages_1.default)(this, am);
+                this.autoMessageCallbacks.push(callback);
+            });
+            connection.end();
+            connection.destroy();
+        });
+    }
     initialize() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -139,6 +164,9 @@ class WhatsappInstance {
                 const isBlackListedType = blockedTypes.includes(message.type);
                 const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
                 const isBlackListed = isBlackListedType || isBlackListedContact;
+                this.autoMessageCallbacks.forEach(cb => {
+                    cb(message);
+                });
                 if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                     const parsedMessage = yield (0, utils_1.messageParser)(message);
                     console.log(parsedMessage);

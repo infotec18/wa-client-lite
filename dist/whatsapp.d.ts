@@ -9,6 +9,7 @@ declare class WhatsappInstance {
     isAuthenticated: boolean;
     isReady: boolean;
     connection: Connection | null;
+    blockedNumbers: Array<string>;
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions);
     private buildClient;
     initialize(): Promise<void>;

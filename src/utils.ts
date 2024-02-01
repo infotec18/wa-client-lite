@@ -1,5 +1,5 @@
 import { Connection, FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise";
-import WAWebJS, { MessageAck } from "whatsapp-web.js";
+import WAWebJS from "whatsapp-web.js";
 import { join } from "node:path";
 import { access, readFile, mkdir, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
@@ -26,7 +26,7 @@ async function messageParser(message: WAWebJS.Message) {
         const TIMESTAMP = Number(`${message.timestamp}000`);
         const FROM_ME = message.fromMe;
 
-        const STATUS = MessageAck[message.ack];
+        const STATUS = ["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][message.ack] || "ERROR";
 
         const serializedMessage = { ID, ID_REFERENCIA, TIPO, MENSAGEM, TIMESTAMP, FROM_ME, DATA_HORA: new Date(TIMESTAMP), STATUS }
 

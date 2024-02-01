@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Connection, ConnectionOptions, FieldPacket, ResultSetHeader, createConnection } from "mysql2/promise";
+import { Connection, ConnectionOptions, FieldPacket, ResultSetHeader, RowDataPacket, createConnection } from "mysql2/promise";
 import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
 import { SendFileOptions } from "./types";
@@ -12,15 +12,12 @@ class WhatsappInstance {
     public isAuthenticated: boolean = false;
     public isReady: boolean = false;
     public connection: Connection | null = null;
+    public blockedNumbers: Array<string> = [];
 
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions) {
         this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
         this.requestURL = requestURL;
-
-        createConnection(connection)
-            .then((res) => this.connection = res)
-            .catch(() => logWithDate(`No connection for instance ${this.clientName}_${this.whatsappNumber}`));
 
         this.client = new Client({
             authStrategy: new LocalAuth({ clientId: `${clientName}_${whatsappNumber}` }),
@@ -39,6 +36,15 @@ class WhatsappInstance {
                 ]
             }
         });
+
+        createConnection(connection)
+            .then(async (res) => {
+                this.connection = res;
+                const [rows]: [RowDataPacket[], FieldPacket[]] = await this.connection.execute(`SELECT * FROM blocked_numbers WHERE instance_number = ?`, [this.whatsappNumber]);
+                this.blockedNumbers = rows.map((r) => r.blocked_number);
+            })
+            .catch(() => logWithDate(`No connection for instance ${this.clientName}_${this.whatsappNumber}`));
+
 
         this.buildClient();
         this.initialize();
@@ -100,22 +106,25 @@ class WhatsappInstance {
     async onReceiveMessage(message: WAWebJS.Message) {
         try {
             const blockedTypes = ["e2e_notification", "notification_template", "call_log"];
-            const blockedNumbers = process.env.BLOCKED_NUMBERS ? process.env.BLOCKED_NUMBERS.split(" ") : [];
             const fromNow = isMessageFromNow(message);
             const chat = await message.getChat();
             const contactNumber = chat.id.user;
 
+            const isStatus = message.isStatus;
             const isBlackListedType = blockedTypes.includes(message.type);
-            const isBlackListedContact = blockedNumbers.includes(contactNumber);
+            const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
             const isBlackListed = isBlackListedType || isBlackListedContact;
 
-            if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed) {
+            if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                 const parsedMessage = await messageParser(message);
+
+                console.log(parsedMessage);
 
                 await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                 logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
             }
         } catch (err: any) {
+            console.error(err.response.data.message);
             logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
         }
     }

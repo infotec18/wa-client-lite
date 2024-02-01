@@ -35,17 +35,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/* const { Router } = require("express");
-const WhatsappInstances = require("./instances.js");
-const path = require("path");
-const fs = require("fs");
-const multer = require('multer');
-const { logWithDate, isUUID, decodeSafeURI } = require("./utils.js");
-const { randomUUID } = require("crypto");
-const mime = require('mime');
-const { default: axios } = require("axios");
-const mysql = require('mysql2/promise');
-const connectionProps = require("./connection.js"); */
 const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const instances_1 = __importDefault(require("./instances"));

@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOrCreateContact = exports.decodeSafeURI = exports.isUUID = exports.getAllEndpoints = exports.logWithDate = exports.formatToOpusAudio = exports.messageParser = exports.isMessageFromNow = void 0;
-const whatsapp_web_js_1 = require("whatsapp-web.js");
 const node_path_1 = require("node:path");
 const promises_1 = require("node:fs/promises");
 const node_crypto_1 = require("node:crypto");
@@ -35,7 +34,7 @@ function messageParser(message) {
             const MENSAGEM = message.body;
             const TIMESTAMP = Number(`${message.timestamp}000`);
             const FROM_ME = message.fromMe;
-            const STATUS = whatsapp_web_js_1.MessageAck[message.ack];
+            const STATUS = ["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][message.ack] || "ERROR";
             const serializedMessage = { ID, ID_REFERENCIA, TIPO, MENSAGEM, TIMESTAMP, FROM_ME, DATA_HORA: new Date(TIMESTAMP), STATUS };
             if (message.hasMedia) {
                 const messageMedia = yield message.downloadMedia();

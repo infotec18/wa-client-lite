@@ -1,14 +1,3 @@
-/* const { Router } = require("express");
-const WhatsappInstances = require("./instances.js");
-const path = require("path");
-const fs = require("fs");
-const multer = require('multer');
-const { logWithDate, isUUID, decodeSafeURI } = require("./utils.js");
-const { randomUUID } = require("crypto");
-const mime = require('mime');
-const { default: axios } = require("axios");
-const mysql = require('mysql2/promise');
-const connectionProps = require("./connection.js"); */
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import instances from "./instances";

@@ -44,12 +44,10 @@ class WhatsappInstance {
         this.isAuthenticated = false;
         this.isReady = false;
         this.connection = null;
+        this.blockedNumbers = [];
         this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
         this.requestURL = requestURL;
-        (0, promise_1.createConnection)(connection)
-            .then((res) => this.connection = res)
-            .catch(() => (0, utils_1.logWithDate)(`No connection for instance ${this.clientName}_${this.whatsappNumber}`));
         this.client = new whatsapp_web_js_1.Client({
             authStrategy: new whatsapp_web_js_1.LocalAuth({ clientId: `${clientName}_${whatsappNumber}` }),
             puppeteer: {
@@ -67,6 +65,13 @@ class WhatsappInstance {
                 ]
             }
         });
+        (0, promise_1.createConnection)(connection)
+            .then((res) => __awaiter(this, void 0, void 0, function* () {
+            this.connection = res;
+            const [rows] = yield this.connection.execute(`SELECT * FROM blocked_numbers WHERE instance_number = ?`, [this.whatsappNumber]);
+            this.blockedNumbers = rows.map((r) => r.blocked_number);
+        }))
+            .catch(() => (0, utils_1.logWithDate)(`No connection for instance ${this.clientName}_${this.whatsappNumber}`));
         this.buildClient();
         this.initialize();
     }
@@ -127,20 +132,22 @@ class WhatsappInstance {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const blockedTypes = ["e2e_notification", "notification_template", "call_log"];
-                const blockedNumbers = process.env.BLOCKED_NUMBERS ? process.env.BLOCKED_NUMBERS.split(" ") : [];
                 const fromNow = (0, utils_1.isMessageFromNow)(message);
                 const chat = yield message.getChat();
                 const contactNumber = chat.id.user;
+                const isStatus = message.isStatus;
                 const isBlackListedType = blockedTypes.includes(message.type);
-                const isBlackListedContact = blockedNumbers.includes(contactNumber);
+                const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
                 const isBlackListed = isBlackListedType || isBlackListedContact;
-                if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed) {
+                if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                     const parsedMessage = yield (0, utils_1.messageParser)(message);
+                    console.log(parsedMessage);
                     yield axios_1.default.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                     (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
                 }
             }
             catch (err) {
+                console.error(err.response.data.message);
                 (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
         });

@@ -10,7 +10,6 @@ function buildAutomaticMessage(
 ): (message: WAWebJS.Message) => void {
 
     const execute = (message: WAWebJS.Message) => {
-        console.log(message);
         const callback = buildResponse(automaticMessage, instance);
         const condition = buildCondition(automaticMessage.send_condition, message, callback);
 

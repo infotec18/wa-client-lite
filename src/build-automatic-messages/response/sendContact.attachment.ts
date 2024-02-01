@@ -6,8 +6,6 @@ async function sendContact(instance: WhatsappInstance, message: WAWebJS.Message,
 
         const numberId = await instance.client.getNumberId(number);
 
-        console.log(numberId)
-
         if (numberId) {
             const contact = await instance.client.getContactById(numberId?._serialized);
             contact && await message.reply(contact);

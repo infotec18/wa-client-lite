@@ -150,13 +150,10 @@ class WhatsappInstance {
             if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                 const parsedMessage = await messageParser(message);
 
-                console.log(parsedMessage);
-
                 await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                 logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
             }
         } catch (err: any) {
-            console.error(err.response.data.message);
             logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
         }
     }
@@ -188,14 +185,11 @@ class WhatsappInstance {
 
                         if (!rows[0]) {
                             const INSERT_CONTACT_QUERY = `INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)`;
-                            const [results]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
+                            const [result]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
                                 INSERT_CONTACT_QUERY,
                                 [-1, contact.name?.slice(0, 30) || contact.number, contact.number]
                             )
-
-                            console.log(results);
-
-                            return results.insertId;
+                            return result.insertId;
                         }
                         const CODIGO_NUMERO = (rows[0] as { CODIGO: number }).CODIGO;
 
@@ -218,7 +212,7 @@ class WhatsappInstance {
                     for (const message of parsedMessases) {
                         if (message) {
                             const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
-                            console.log([0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
+
                             const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                             const [results]: [ResultSetHeader, FieldPacket[]] = await this.connection.execute(
                                 INSERT_MESSAGE_QUERY,

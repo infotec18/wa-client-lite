@@ -19,7 +19,6 @@ function outsideTimeInterval(
     );
 
     if (isOutsideTimeInterval) {
-        console.log("ÄQUI")
         cb(message);
     }
 }

@@ -169,13 +169,11 @@ class WhatsappInstance {
                 });
                 if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                     const parsedMessage = yield (0, utils_1.messageParser)(message);
-                    console.log(parsedMessage);
                     yield axios_1.default.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                     (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
                 }
             }
             catch (err) {
-                console.error(err.response.data.message);
                 (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
         });
@@ -205,9 +203,8 @@ class WhatsappInstance {
                             const [rows] = yield connection.execute(SELECT_CONTACT_QUERY, [chat.id.user]);
                             if (!rows[0]) {
                                 const INSERT_CONTACT_QUERY = `INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)`;
-                                const [results] = yield connection.execute(INSERT_CONTACT_QUERY, [-1, ((_a = contact.name) === null || _a === void 0 ? void 0 : _a.slice(0, 30)) || contact.number, contact.number]);
-                                console.log(results);
-                                return results.insertId;
+                                const [result] = yield connection.execute(INSERT_CONTACT_QUERY, [-1, ((_a = contact.name) === null || _a === void 0 ? void 0 : _a.slice(0, 30)) || contact.number, contact.number]);
+                                return result.insertId;
                             }
                             const CODIGO_NUMERO = rows[0].CODIGO;
                             return CODIGO_NUMERO;
@@ -226,7 +223,6 @@ class WhatsappInstance {
                         for (const message of parsedMessases) {
                             if (message) {
                                 const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
-                                console.log([0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
                                 const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                                 const [results] = yield this.connection.execute(INSERT_MESSAGE_QUERY, [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
                                 const insertId = results.insertId;

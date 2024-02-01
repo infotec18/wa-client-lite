@@ -13,7 +13,6 @@ function sendContact(instance, message, number) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const numberId = yield instance.client.getNumberId(number);
-            console.log(numberId);
             if (numberId) {
                 const contact = yield instance.client.getContactById(numberId === null || numberId === void 0 ? void 0 : numberId._serialized);
                 contact && (yield message.reply(contact));

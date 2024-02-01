@@ -153,15 +153,11 @@ exports.isUUID = isUUID;
 function getOrCreateContact(connection, number, name) {
     return __awaiter(this, void 0, void 0, function* () {
         const SELECT_NUMBER_QUERY = "SELECT * FROM w_clientes_numeros WHERE NUMERO = ?";
-        const [rows, fields] = yield connection.execute(SELECT_NUMBER_QUERY, [number]);
-        console.log("Rows", rows);
-        console.log("Fields", fields);
+        const [rows] = yield connection.execute(SELECT_NUMBER_QUERY, [number]);
         if (!rows[0]) {
             const INSERT_NUMBER_QUERY = "INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)";
-            const [results, fields] = yield connection.execute(INSERT_NUMBER_QUERY, [-1, name, number]);
-            console.log("Results", results);
-            console.log("Fields", fields);
-            return results[0].insertId;
+            const [result] = yield connection.execute(INSERT_NUMBER_QUERY, [-1, name, number]);
+            return result.insertId;
         }
         return rows[0].CODIGO;
     });

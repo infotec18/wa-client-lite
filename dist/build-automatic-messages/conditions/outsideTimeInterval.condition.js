@@ -9,7 +9,6 @@ function outsideTimeInterval(initialTime, finalTime, message, cb) {
     const isOutsideTimeInterval = ((currentHours < initialHour || (currentHours === initialHour && currentMinutes < initialMinute)) ||
         (currentHours > finalHour || (currentHours === finalHour && currentMinutes > finalMinute)));
     if (isOutsideTimeInterval) {
-        console.log("ÄQUI");
         cb(message);
     }
 }

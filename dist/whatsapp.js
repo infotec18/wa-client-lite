@@ -164,16 +164,27 @@ class WhatsappInstance {
             }
         });
     }
-    // Configurar rotina!!!
     loadMessages() {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const chats = (yield this.client.getChats()).filter((c) => !c.isGroup);
                 for (const chat of chats) {
                     const contact = yield this.client.getContactById(chat.id._serialized);
                     if (contact && this.connection) {
-                        const CODIGO_NUMERO = 50;
+                        const getCodigoNumero = (connection) => __awaiter(this, void 0, void 0, function* () {
+                            var _a;
+                            const SELECT_CONTACT_QUERY = `SELECT * FROM w_clientes_numeros WHERE NUMERO = ?`;
+                            const [rows] = yield connection.execute(SELECT_CONTACT_QUERY, [chat.id.user]);
+                            if (!rows[0]) {
+                                const INSERT_CONTACT_QUERY = `INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)`;
+                                const [results] = yield connection.execute(INSERT_CONTACT_QUERY, [-1, ((_a = contact.name) === null || _a === void 0 ? void 0 : _a.slice(0, 30)) || contact.number, contact.number]);
+                                console.log(results);
+                                return results.insertId;
+                            }
+                            const CODIGO_NUMERO = rows[0].CODIGO;
+                            return CODIGO_NUMERO;
+                        });
+                        const CODIGO_NUMERO = yield getCodigoNumero(this.connection);
                         const messages = yield chat.fetchMessages({});
                         const parsedMessases = yield Promise.all(messages.map((m) => __awaiter(this, void 0, void 0, function* () {
                             const parsedMessage = yield (0, utils_1.messageParser)(m);
@@ -187,9 +198,10 @@ class WhatsappInstance {
                         for (const message of parsedMessases) {
                             if (message) {
                                 const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
+                                console.log([0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
                                 const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                                const [rows] = yield this.connection.execute(INSERT_MESSAGE_QUERY, [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
-                                const insertId = (_a = rows[0]) === null || _a === void 0 ? void 0 : _a.insertId;
+                                const [results] = yield this.connection.execute(INSERT_MESSAGE_QUERY, [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
+                                const insertId = results.insertId;
                                 if (insertId && message.ARQUIVO) {
                                     const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;
                                     const INSERT_FILE_QUERY = "INSERT INTO w_mensagens_arquivos (CODIGO_MENSAGEM, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO) VALUES (?, ?, ?, ?, ?)";

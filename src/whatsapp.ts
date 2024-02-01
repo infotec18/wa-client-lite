@@ -141,7 +141,7 @@ class WhatsappInstance {
         }
     }
 
-    // Configurar rotina!!!
+
     async loadMessages() {
         try {
             const chats = (await this.client.getChats()).filter((c) => !c.isGroup);
@@ -150,8 +150,29 @@ class WhatsappInstance {
                 const contact = await this.client.getContactById(chat.id._serialized);
 
                 if (contact && this.connection) {
-                    const CODIGO_NUMERO: number = 50;
+                    const getCodigoNumero = async (connection: Connection) => {
+                        const SELECT_CONTACT_QUERY = `SELECT * FROM w_clientes_numeros WHERE NUMERO = ?`;
+                        const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_CONTACT_QUERY, [chat.id.user]);
+
+                        if (!rows[0]) {
+                            const INSERT_CONTACT_QUERY = `INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)`;
+                            const [results]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
+                                INSERT_CONTACT_QUERY,
+                                [-1, contact.name?.slice(0, 30) || contact.number, contact.number]
+                            )
+
+                            console.log(results);
+
+                            return results.insertId;
+                        }
+                        const CODIGO_NUMERO = (rows[0] as { CODIGO: number }).CODIGO;
+
+                        return CODIGO_NUMERO;
+                    }
+
+                    const CODIGO_NUMERO = await getCodigoNumero(this.connection)
                     const messages = await chat.fetchMessages({});
+
                     const parsedMessases = await Promise.all(messages.map(async (m) => {
                         const parsedMessage = await messageParser(m);
 
@@ -165,14 +186,14 @@ class WhatsappInstance {
                     for (const message of parsedMessases) {
                         if (message) {
                             const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
-
+                            console.log([0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
                             const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                            const [rows]: [ResultSetHeader[], FieldPacket[]] = await this.connection.execute(
+                            const [results]: [ResultSetHeader, FieldPacket[]] = await this.connection.execute(
                                 INSERT_MESSAGE_QUERY,
                                 [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]
                             );
 
-                            const insertId = rows[0]?.insertId;
+                            const insertId = results.insertId;
 
                             if (insertId && message.ARQUIVO) {
                                 const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;

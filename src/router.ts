@@ -16,7 +16,8 @@ class AppRouter {
 
         this.router.get("", this.healthCheck);
         this.router.get("/clients", this.getClientStatus);
-        this.router.get("/clients/:from/avatars//:to", this.getProfilePic);
+        this.router.get("/clients/:from/avatars/:to", this.getProfilePic);
+        this.router.get("/clients/:from/load-messages", this.loadMessages);
         this.router.get("/clients/:from/validate-number/:to", this.validateNumber);
         this.router.post("/clients/:from/messages/:to", upload.single("file"), this.sendMessage);
         this.router.post("/clients/:from/mass-messages/:from", upload.single("file"), this.sendMassMessages)

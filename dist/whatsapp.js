@@ -81,7 +81,7 @@ class WhatsappInstance {
             }
         }));
         this.client.on("loading_screen", (percent, message) => {
-            (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Loading => ${message} | ${percent}`);
+            (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Loading => ${message} ${percent}%`);
         });
         this.client.on("change_state", (state) => {
             (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Chage state => ${state}`);
@@ -100,7 +100,6 @@ class WhatsappInstance {
             try {
                 yield axios_1.default.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
                 this.isReady = true;
-                this.loadMessages();
                 (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Ready success!`);
             }
             catch (err) {
@@ -149,18 +148,16 @@ class WhatsappInstance {
     onReceiveMessageStatus(message) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const status = whatsapp_web_js_1.MessageAck[message.ack];
-                console.log(status, message.body);
-                /* if ("PENDING SENT RECEIVED READ".includes(status)) {
-                    await axios.put(`${this.requestURL}/update_message/${message.id._serialized}`, { status });
-                    logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Status success => ${status} ${message.id._serialized}`);
-                } */
+                const status = ["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][message.ack] || "ERROR";
+                yield axios_1.default.put(`${this.requestURL}/update_message/${message.id._serialized}`, { status });
+                (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Status success => ${status} ${message.id._serialized}`);
             }
             catch (err) {
                 (0, utils_1.logWithDate)(`[${this.clientName} - ${this.whatsappNumber}] Status failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
             }
         });
     }
+    // Configurar rotina!!!
     loadMessages() {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {

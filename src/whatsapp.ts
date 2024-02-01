@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Connection, ConnectionOptions, FieldPacket, ResultSetHeader, createConnection } from "mysql2/promise";
-import WAWebJS, { Client, LocalAuth, MessageAck } from "whatsapp-web.js";
+import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
 import { SendFileOptions } from "./types";
 
@@ -55,7 +55,7 @@ class WhatsappInstance {
         });
 
         this.client.on("loading_screen", (percent, message) => {
-            logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Loading => ${message} | ${percent}`);
+            logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Loading => ${message} ${percent}%`);
         });
 
         this.client.on("change_state", (state) => {
@@ -76,7 +76,6 @@ class WhatsappInstance {
             try {
                 await axios.put(`${this.requestURL}/ready/${this.whatsappNumber}`);
                 this.isReady = true;
-                this.loadMessages();
                 logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Ready success!`);
             } catch (err: any) {
                 logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Ready failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
@@ -123,19 +122,17 @@ class WhatsappInstance {
 
     async onReceiveMessageStatus(message: WAWebJS.Message) {
         try {
-            const status = MessageAck[message.ack];
-            console.log(status, message.body);
+            const status = ["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][message.ack] || "ERROR";
 
-            /* if ("PENDING SENT RECEIVED READ".includes(status)) {
-                await axios.put(`${this.requestURL}/update_message/${message.id._serialized}`, { status });
-                logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Status success => ${status} ${message.id._serialized}`);
-            } */
+            await axios.put(`${this.requestURL}/update_message/${message.id._serialized}`, { status });
+            logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Status success => ${status} ${message.id._serialized}`);
 
         } catch (err: any) {
             logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Status failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
         }
     }
 
+    // Configurar rotina!!!
     async loadMessages() {
         try {
             const chats = (await this.client.getChats()).filter((c) => !c.isGroup);

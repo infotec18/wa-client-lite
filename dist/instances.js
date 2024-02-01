@@ -19,7 +19,7 @@ const { REQUEST_URL } = process.env;
 const SELECT_INSTANCES_QUERY = `
 SELECT 
     wi.*,
-    db.host AS db_port,
+    db.host AS db_host,
     db.port AS db_port,
     db.user AS db_user,
     db.password AS db_pass,

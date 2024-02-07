@@ -45,13 +45,13 @@ class WhatsappInstance {
     constructor(clientName, whatsappNumber, requestURL, connection) {
         this.isAuthenticated = false;
         this.isReady = false;
-        this.connection = null;
         this.blockedNumbers = [];
         this.autoMessageCounter = new Map();
         this.autoMessageCallbacks = [];
         this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
         this.requestURL = requestURL;
+        this.connectionParams = connection;
         this.client = new whatsapp_web_js_1.Client({
             authStrategy: new whatsapp_web_js_1.LocalAuth({ clientId: `${clientName}_${whatsappNumber}` }),
             puppeteer: {
@@ -69,9 +69,6 @@ class WhatsappInstance {
                 ]
             }
         });
-        (0, promise_1.createConnection)(connection)
-            .then((res) => __awaiter(this, void 0, void 0, function* () { this.connection = res; }))
-            .catch((err) => (0, utils_1.logWithDate)(`No connection for instance ${this.clientName}_${this.whatsappNumber}`, err));
         this.buildBlockedNumbers();
         this.buildAutomaticMessages();
         this.buildClient();
@@ -193,10 +190,11 @@ class WhatsappInstance {
     loadMessages() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                const connection = yield (0, promise_1.createConnection)(this.connectionParams);
                 const chats = (yield this.client.getChats()).filter((c) => !c.isGroup);
                 for (const chat of chats) {
                     const contact = yield this.client.getContactById(chat.id._serialized);
-                    if (contact && this.connection) {
+                    if (contact && connection) {
                         const getCodigoNumero = (connection) => __awaiter(this, void 0, void 0, function* () {
                             var _a;
                             const SELECT_CONTACT_QUERY = `SELECT * FROM w_clientes_numeros WHERE NUMERO = ?`;
@@ -209,7 +207,7 @@ class WhatsappInstance {
                             const CODIGO_NUMERO = rows[0].CODIGO;
                             return CODIGO_NUMERO;
                         });
-                        const CODIGO_NUMERO = yield getCodigoNumero(this.connection);
+                        const CODIGO_NUMERO = yield getCodigoNumero(connection);
                         const messages = yield chat.fetchMessages({});
                         const parsedMessases = yield Promise.all(messages.map((m) => __awaiter(this, void 0, void 0, function* () {
                             const parsedMessage = yield (0, utils_1.messageParser)(m);
@@ -224,12 +222,12 @@ class WhatsappInstance {
                             if (message) {
                                 const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
                                 const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                                const [results] = yield this.connection.execute(INSERT_MESSAGE_QUERY, [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
+                                const [results] = yield connection.execute(INSERT_MESSAGE_QUERY, [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
                                 const insertId = results.insertId;
                                 if (insertId && message.ARQUIVO) {
                                     const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;
                                     const INSERT_FILE_QUERY = "INSERT INTO w_mensagens_arquivos (CODIGO_MENSAGEM, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO) VALUES (?, ?, ?, ?, ?)";
-                                    yield this.connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
+                                    yield connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
                                 }
                             }
                         }

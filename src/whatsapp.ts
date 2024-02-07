@@ -13,7 +13,7 @@ class WhatsappInstance {
     public readonly whatsappNumber;
     public isAuthenticated: boolean = false;
     public isReady: boolean = false;
-    public connection: Connection | null = null;
+    public connectionParams: ConnectionOptions;
     public blockedNumbers: Array<string> = [];
     public autoMessageCounter: Map<string, Record<number, number>> = new Map();
     private readonly autoMessageCallbacks: Array<(message: WAWebJS.Message) => void> = [];
@@ -22,6 +22,7 @@ class WhatsappInstance {
         this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
         this.requestURL = requestURL;
+        this.connectionParams = connection;
 
         this.client = new Client({
             authStrategy: new LocalAuth({ clientId: `${clientName}_${whatsappNumber}` }),
@@ -40,11 +41,6 @@ class WhatsappInstance {
                 ]
             }
         });
-
-        createConnection(connection)
-            .then(async (res) => { this.connection = res })
-            .catch((err) => logWithDate(`No connection for instance ${this.clientName}_${this.whatsappNumber}`, err));
-
 
         this.buildBlockedNumbers();
         this.buildAutomaticMessages();
@@ -173,12 +169,13 @@ class WhatsappInstance {
 
     public async loadMessages() {
         try {
+            const connection = await createConnection(this.connectionParams);
             const chats = (await this.client.getChats()).filter((c) => !c.isGroup);
 
             for (const chat of chats) {
                 const contact = await this.client.getContactById(chat.id._serialized);
 
-                if (contact && this.connection) {
+                if (contact && connection) {
                     const getCodigoNumero = async (connection: Connection) => {
                         const SELECT_CONTACT_QUERY = `SELECT * FROM w_clientes_numeros WHERE NUMERO = ?`;
                         const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_CONTACT_QUERY, [chat.id.user]);
@@ -196,7 +193,7 @@ class WhatsappInstance {
                         return CODIGO_NUMERO;
                     }
 
-                    const CODIGO_NUMERO = await getCodigoNumero(this.connection)
+                    const CODIGO_NUMERO = await getCodigoNumero(connection)
                     const messages = await chat.fetchMessages({});
 
                     const parsedMessases = await Promise.all(messages.map(async (m) => {
@@ -214,7 +211,7 @@ class WhatsappInstance {
                             const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
 
                             const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                            const [results]: [ResultSetHeader, FieldPacket[]] = await this.connection.execute(
+                            const [results]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
                                 INSERT_MESSAGE_QUERY,
                                 [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]
                             );
@@ -224,7 +221,7 @@ class WhatsappInstance {
                             if (insertId && message.ARQUIVO) {
                                 const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;
                                 const INSERT_FILE_QUERY = "INSERT INTO w_mensagens_arquivos (CODIGO_MENSAGEM, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO) VALUES (?, ?, ?, ?, ?)";
-                                await this.connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
+                                await connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
                             }
                         }
                     }

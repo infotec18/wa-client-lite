@@ -1,4 +1,4 @@
-import { Connection, ConnectionOptions } from "mysql2/promise";
+import { ConnectionOptions } from "mysql2/promise";
 import WAWebJS, { Client } from "whatsapp-web.js";
 import { SendFileOptions } from "./types";
 declare class WhatsappInstance {
@@ -8,7 +8,7 @@ declare class WhatsappInstance {
     readonly whatsappNumber: string;
     isAuthenticated: boolean;
     isReady: boolean;
-    connection: Connection | null;
+    connectionParams: ConnectionOptions;
     blockedNumbers: Array<string>;
     autoMessageCounter: Map<string, Record<number, number>>;
     private readonly autoMessageCallbacks;

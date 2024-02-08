@@ -32,4 +32,21 @@ export interface DBAutomaticMessage {
     readonly send_max_times: number;
 }
 
+export interface ParsedMessage {
+    ID: string;
+    ID_REFERENCIA?: string;
+    TIPO: string;
+    MENSAGEM: string;
+    TIMESTAMP: number;
+    FROM_ME: boolean;
+    DATA_HORA: Date;
+    STATUS: string;
+    ARQUIVO: null | {
+        NOME_ARQUIVO: string;
+        TIPO: string;
+        NOME_ORIGINAL: string;
+        ARMAZENAMENTO: string;
+    }
+}
+
 export type AttachmentType = "contact" | "document" | "image" | "video" | "audio" | "voice" | "location" | null;

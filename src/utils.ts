@@ -6,6 +6,9 @@ import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { spawn } from "node:child_process";
 import { Router } from "express";
+import { config } from "dotenv";
+import { extension } from "mime-types";
+config();
 
 function isMessageFromNow(message: WAWebJS.Message) {
     const messageDate = new Date(Number(`${message.timestamp}000`));
@@ -34,11 +37,12 @@ async function messageParser(message: WAWebJS.Message) {
             const messageMedia = await message.downloadMedia();
             const mediaBuffer = Buffer.from(messageMedia.data, 'base64');
             const uuid = randomUUID();
-            const ARQUIVO_NOME = `${uuid}_${messageMedia.filename}`;
-            const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
             const ARQUIVO_TIPO = messageMedia.mimetype;
+            const ext = extension(ARQUIVO_TIPO) || "dat";
+            const ARQUIVO_NOME = messageMedia.filename ? `${uuid}_${messageMedia.filename}` : `${uuid}_unamed.${ext}`;
+            const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
 
-            const filesPath = join(__dirname, '/', 'files');
+            const filesPath = process.env.FILES_DIRECTORY!;
             const savePath = join(filesPath, ARQUIVO_NOME);
 
             await writeFile(savePath, mediaBuffer);

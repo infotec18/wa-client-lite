@@ -130,7 +130,7 @@ class WhatsappInstance {
 
     public async onReceiveMessage(message: WAWebJS.Message) {
         try {
-            const blockedTypes = ["e2e_notification", "notification_template", "call_log"];
+            const blockedTypes = ["e2e_notification", "notification_template", "call_log", "gp2"];
             const fromNow = isMessageFromNow(message);
             const chat = await message.getChat();
             const contactNumber = chat.id.user;

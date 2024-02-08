@@ -36,7 +36,8 @@ async function processChat(connection: any, instance: WhatsappInstance, chats: W
 async function processContactMessages(connection: Connection, chat: WAWebJS.Chat, contact: WAWebJS.Contact) {
     try {
         const CODIGO_NUMERO = await getNumberErpId(connection, contact.id.user, contact.name);
-        const messages = await chat.fetchMessages({});
+        const blocked_types = ["e2e_notification", "notification_template", "call_log", "gp2"];
+        const messages = (await chat.fetchMessages({})).filter(m => !blocked_types.includes(m.type));
 
         logWithDate(`Parsing ${messages.length} messages...`);
 

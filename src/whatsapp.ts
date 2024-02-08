@@ -1,10 +1,11 @@
 import axios from "axios";
-import { Connection, ConnectionOptions, FieldPacket, ResultSetHeader, RowDataPacket, createConnection } from "mysql2/promise";
+import { ConnectionOptions, FieldPacket, RowDataPacket } from "mysql2/promise";
 import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
 import { DBAutomaticMessage, SendFileOptions } from "./types";
 import buildAutomaticMessage from "./build-automatic-messages";
 import getDBConnection from "./connection";
+import loadMessages from "./functions/loadMessages";
 
 class WhatsappInstance {
     public readonly requestURL: string;
@@ -15,8 +16,8 @@ class WhatsappInstance {
     public isReady: boolean = false;
     public connectionParams: ConnectionOptions;
     public blockedNumbers: Array<string> = [];
-    public autoMessageCounter: Map<string, Record<number, number>> = new Map();
-    private readonly autoMessageCallbacks: Array<(message: WAWebJS.Message) => void> = [];
+    public autoMessageCounters: Map<number, Array<{ number: string, count: number }>> = new Map();
+    private readonly autoMessageCallbacks: Array<(message: WAWebJS.Message, contact: string) => void> = [];
 
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions) {
         this.clientName = clientName;
@@ -140,7 +141,7 @@ class WhatsappInstance {
             const isBlackListed = isBlackListedType || isBlackListedContact;
 
             this.autoMessageCallbacks.forEach(cb => {
-                cb(message);
+                cb(message, contactNumber);
             });
 
             if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
@@ -168,68 +169,7 @@ class WhatsappInstance {
 
 
     public async loadMessages() {
-        try {
-            const connection = await createConnection(this.connectionParams);
-            const chats = (await this.client.getChats()).filter((c) => !c.isGroup);
-
-            for (const chat of chats) {
-                const contact = await this.client.getContactById(chat.id._serialized);
-
-                if (contact && connection) {
-                    const getCodigoNumero = async (connection: Connection) => {
-                        const SELECT_CONTACT_QUERY = `SELECT * FROM w_clientes_numeros WHERE NUMERO = ?`;
-                        const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_CONTACT_QUERY, [chat.id.user]);
-
-                        if (!rows[0]) {
-                            const INSERT_CONTACT_QUERY = `INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)`;
-                            const [result]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
-                                INSERT_CONTACT_QUERY,
-                                [-1, contact.name?.slice(0, 30) || contact.number, contact.number]
-                            )
-                            return result.insertId;
-                        }
-                        const CODIGO_NUMERO = (rows[0] as { CODIGO: number }).CODIGO;
-
-                        return CODIGO_NUMERO;
-                    }
-
-                    const CODIGO_NUMERO = await getCodigoNumero(connection)
-                    const messages = await chat.fetchMessages({});
-
-                    const parsedMessases = await Promise.all(messages.map(async (m) => {
-                        const parsedMessage = await messageParser(m);
-
-                        if (parsedMessage) {
-                            return { ...parsedMessage, MENSAGEM: encodeURI(parsedMessage.MENSAGEM), CODIGO_NUMERO }
-                        } else {
-                            return false;
-                        }
-                    }));
-
-                    for (const message of parsedMessases) {
-                        if (message) {
-                            const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
-
-                            const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                            const [results]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
-                                INSERT_MESSAGE_QUERY,
-                                [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]
-                            );
-
-                            const insertId = results.insertId;
-
-                            if (insertId && message.ARQUIVO) {
-                                const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;
-                                const INSERT_FILE_QUERY = "INSERT INTO w_mensagens_arquivos (CODIGO_MENSAGEM, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO) VALUES (?, ?, ?, ?, ?)";
-                                await connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (err: any) {
-            logWithDate("Load Messages Error =>", err)
-        }
+        loadMessages(this);
     }
 
 

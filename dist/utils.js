@@ -9,12 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrCreateContact = exports.decodeSafeURI = exports.isUUID = exports.getAllEndpoints = exports.logWithDate = exports.formatToOpusAudio = exports.messageParser = exports.isMessageFromNow = void 0;
+exports.filesPath = exports.getOrCreateContact = exports.decodeSafeURI = exports.isUUID = exports.getAllEndpoints = exports.logWithDate = exports.formatToOpusAudio = exports.messageParser = exports.isMessageFromNow = void 0;
 const node_path_1 = require("node:path");
 const promises_1 = require("node:fs/promises");
 const node_crypto_1 = require("node:crypto");
 const node_stream_1 = require("node:stream");
 const node_child_process_1 = require("node:child_process");
+const dotenv_1 = require("dotenv");
+const mime_types_1 = require("mime-types");
+(0, dotenv_1.config)();
+const filesPath = process.env.FILES_DIRECTORY;
+exports.filesPath = filesPath;
 function isMessageFromNow(message) {
     const messageDate = new Date(Number(`${message.timestamp}000`));
     const currentDate = new Date();
@@ -40,11 +45,11 @@ function messageParser(message) {
                 const messageMedia = yield message.downloadMedia();
                 const mediaBuffer = Buffer.from(messageMedia.data, 'base64');
                 const uuid = (0, node_crypto_1.randomUUID)();
-                const ARQUIVO_NOME = `${uuid}_${messageMedia.filename}`;
-                const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
                 const ARQUIVO_TIPO = messageMedia.mimetype;
-                const filesPath = (0, node_path_1.join)(__dirname, '/', 'files');
-                const savePath = (0, node_path_1.join)(filesPath, ARQUIVO_NOME);
+                const ext = (0, mime_types_1.extension)(ARQUIVO_TIPO) || "dat";
+                const ARQUIVO_NOME = messageMedia.filename ? `${uuid}_${messageMedia.filename}` : `${uuid}_unamed.${ext}`;
+                const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
+                const savePath = (0, node_path_1.join)(filesPath, "/media", ARQUIVO_NOME);
                 yield (0, promises_1.writeFile)(savePath, mediaBuffer);
                 yield (0, promises_1.access)(savePath);
                 const serializedFile = {
@@ -94,7 +99,7 @@ exports.getAllEndpoints = getAllEndpoints;
 function formatToOpusAudio(file) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const tempPath = (0, node_path_1.join)(__dirname, "temp");
+            const tempPath = (0, node_path_1.join)(filesPath, "temp");
             try {
                 yield (0, promises_1.access)(tempPath);
             }

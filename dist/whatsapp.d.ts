@@ -10,7 +10,10 @@ declare class WhatsappInstance {
     isReady: boolean;
     connectionParams: ConnectionOptions;
     blockedNumbers: Array<string>;
-    autoMessageCounter: Map<string, Record<number, number>>;
+    autoMessageCounters: Map<number, Array<{
+        number: string;
+        count: number;
+    }>>;
     private readonly autoMessageCallbacks;
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions);
     private buildClient;

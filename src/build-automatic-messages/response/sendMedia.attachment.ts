@@ -2,11 +2,12 @@ import WAWebJS, { MessageMedia } from "whatsapp-web.js";
 import fs from "fs";
 import path from "path";
 import * as mime from "mime";
-import { formatToOpusAudio } from "../../utils";
+import { filesPath, formatToOpusAudio } from "../../utils";
 
 async function sendMedia(message: WAWebJS.Message, filename: string, voice?: boolean, document?: boolean) {
     try {
-        const searchFilePath = path.join(__dirname, "../../auto-files", filename);
+
+        const searchFilePath = path.join(filesPath, "/auto-files", filename);
 
         const mimeType = mime.getType(searchFilePath);
         const file = fs.readFileSync(searchFilePath);

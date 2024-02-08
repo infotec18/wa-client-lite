@@ -36,17 +36,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const axios_1 = __importDefault(require("axios"));
-const promise_1 = require("mysql2/promise");
 const whatsapp_web_js_1 = __importStar(require("whatsapp-web.js"));
 const utils_1 = require("./utils");
 const build_automatic_messages_1 = __importDefault(require("./build-automatic-messages"));
 const connection_1 = __importDefault(require("./connection"));
+const loadMessages_1 = __importDefault(require("./functions/loadMessages"));
 class WhatsappInstance {
     constructor(clientName, whatsappNumber, requestURL, connection) {
         this.isAuthenticated = false;
         this.isReady = false;
         this.blockedNumbers = [];
-        this.autoMessageCounter = new Map();
+        this.autoMessageCounters = new Map();
         this.autoMessageCallbacks = [];
         this.clientName = clientName;
         this.whatsappNumber = whatsappNumber;
@@ -153,7 +153,7 @@ class WhatsappInstance {
     onReceiveMessage(message) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const blockedTypes = ["e2e_notification", "notification_template", "call_log"];
+                const blockedTypes = ["e2e_notification", "notification_template", "call_log", "gp2"];
                 const fromNow = (0, utils_1.isMessageFromNow)(message);
                 const chat = yield message.getChat();
                 const contactNumber = chat.id.user;
@@ -162,7 +162,7 @@ class WhatsappInstance {
                 const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
                 const isBlackListed = isBlackListedType || isBlackListedContact;
                 this.autoMessageCallbacks.forEach(cb => {
-                    cb(message);
+                    cb(message, contactNumber);
                 });
                 if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                     const parsedMessage = yield (0, utils_1.messageParser)(message);
@@ -189,54 +189,7 @@ class WhatsappInstance {
     }
     loadMessages() {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const connection = yield (0, promise_1.createConnection)(this.connectionParams);
-                const chats = (yield this.client.getChats()).filter((c) => !c.isGroup);
-                for (const chat of chats) {
-                    const contact = yield this.client.getContactById(chat.id._serialized);
-                    if (contact && connection) {
-                        const getCodigoNumero = (connection) => __awaiter(this, void 0, void 0, function* () {
-                            var _a;
-                            const SELECT_CONTACT_QUERY = `SELECT * FROM w_clientes_numeros WHERE NUMERO = ?`;
-                            const [rows] = yield connection.execute(SELECT_CONTACT_QUERY, [chat.id.user]);
-                            if (!rows[0]) {
-                                const INSERT_CONTACT_QUERY = `INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)`;
-                                const [result] = yield connection.execute(INSERT_CONTACT_QUERY, [-1, ((_a = contact.name) === null || _a === void 0 ? void 0 : _a.slice(0, 30)) || contact.number, contact.number]);
-                                return result.insertId;
-                            }
-                            const CODIGO_NUMERO = rows[0].CODIGO;
-                            return CODIGO_NUMERO;
-                        });
-                        const CODIGO_NUMERO = yield getCodigoNumero(connection);
-                        const messages = yield chat.fetchMessages({});
-                        const parsedMessases = yield Promise.all(messages.map((m) => __awaiter(this, void 0, void 0, function* () {
-                            const parsedMessage = yield (0, utils_1.messageParser)(m);
-                            if (parsedMessage) {
-                                return Object.assign(Object.assign({}, parsedMessage), { MENSAGEM: encodeURI(parsedMessage.MENSAGEM), CODIGO_NUMERO });
-                            }
-                            else {
-                                return false;
-                            }
-                        })));
-                        for (const message of parsedMessases) {
-                            if (message) {
-                                const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
-                                const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                                const [results] = yield connection.execute(INSERT_MESSAGE_QUERY, [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]);
-                                const insertId = results.insertId;
-                                if (insertId && message.ARQUIVO) {
-                                    const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;
-                                    const INSERT_FILE_QUERY = "INSERT INTO w_mensagens_arquivos (CODIGO_MENSAGEM, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO) VALUES (?, ?, ?, ?, ?)";
-                                    yield connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (err) {
-                (0, utils_1.logWithDate)("Load Messages Error =>", err);
-            }
+            (0, loadMessages_1.default)(this);
         });
     }
     sendText(contact, text, quotedMessageId) {

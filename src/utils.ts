@@ -10,6 +10,8 @@ import { config } from "dotenv";
 import { extension } from "mime-types";
 config();
 
+const filesPath = process.env.FILES_DIRECTORY!;
+
 function isMessageFromNow(message: WAWebJS.Message) {
     const messageDate = new Date(Number(`${message.timestamp}000`));
     const currentDate = new Date();
@@ -42,8 +44,7 @@ async function messageParser(message: WAWebJS.Message) {
             const ARQUIVO_NOME = messageMedia.filename ? `${uuid}_${messageMedia.filename}` : `${uuid}_unamed.${ext}`;
             const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
 
-            const filesPath = process.env.FILES_DIRECTORY!;
-            const savePath = join(filesPath, ARQUIVO_NOME);
+            const savePath = join(filesPath, "/media", ARQUIVO_NOME);
 
             await writeFile(savePath, mediaBuffer);
             await access(savePath);
@@ -99,13 +100,14 @@ function getAllEndpoints(router: Router, path: string) {
 
 async function formatToOpusAudio(file: Buffer): Promise<Buffer> {
     try {
-        const tempPath = join(__dirname, "temp");
+        const tempPath = join(filesPath, "temp");
 
         try {
             await access(tempPath);
         } catch {
             await mkdir(tempPath);
         }
+
 
         const savePath = join(tempPath, `${randomUUID()}.mp3`);
         const readableStream = new Readable({
@@ -170,4 +172,4 @@ async function getOrCreateContact(connection: Connection, number: string, name: 
     return rows[0].CODIGO;
 }
 
-export { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI, getOrCreateContact };
+export { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI, getOrCreateContact, filesPath };

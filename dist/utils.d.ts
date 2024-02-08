@@ -2,6 +2,7 @@
 import { Connection } from "mysql2/promise";
 import WAWebJS from "whatsapp-web.js";
 import { Router } from "express";
+declare const filesPath: string;
 declare function isMessageFromNow(message: WAWebJS.Message): boolean;
 declare function messageParser(message: WAWebJS.Message): Promise<{
     ARQUIVO: {
@@ -35,5 +36,5 @@ declare function formatToOpusAudio(file: Buffer): Promise<Buffer>;
 declare function decodeSafeURI(uri: string): string;
 declare function isUUID(str: string): boolean;
 declare function getOrCreateContact(connection: Connection, number: string, name: string): Promise<number>;
-export { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI, getOrCreateContact };
+export { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI, getOrCreateContact, filesPath };
 //# sourceMappingURL=utils.d.ts.map

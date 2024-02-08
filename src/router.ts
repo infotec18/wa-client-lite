@@ -1,12 +1,15 @@
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import instances from "./instances";
-import { decodeSafeURI, isUUID, logWithDate } from "./utils";
+import { decodeSafeURI, filesPath, isUUID, logWithDate } from "./utils";
 import * as mime from "mime";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import axios from "axios";
+import { config } from "dotenv";
+
+config();
 
 class AppRouter {
     public readonly router = Router();
@@ -67,7 +70,7 @@ class AppRouter {
                 res.status(201).json(sentMessageWithFile);
             } else if (filename) {
 
-                const filePath = join(__dirname, './files', filename)
+                const filePath = join(filesPath, '/media', filename)
                 const localfile = readFileSync(filePath);
                 const mimeType = mime.getType(filePath);
 
@@ -114,8 +117,9 @@ class AppRouter {
 
     async getFile(req: Request, res: Response) {
         try {
+            const filesPath = process.env.FILES_DIRECTORY!;
             const fileName = req.params.filename;
-            const searchFilePath = join(__dirname, "/files", fileName);
+            const searchFilePath = join(filesPath, "/media", fileName);
 
             if (!existsSync(searchFilePath)) {
                 return res.status(404).json({ message: "File not found" });
@@ -177,7 +181,9 @@ class AppRouter {
             const filename = decodeURIComponent(req.file.originalname).split(".")[0]
             const ext = decodeURIComponent(req.file.originalname).split(".")[1]
             const generatedName = `${uuid}_${filename}.${ext}`;
-            const filePath = join(__dirname, "/files", generatedName);
+
+            const filesPath = process.env.FILES_DIRECTORY!;
+            const filePath = join(filesPath, "/media", generatedName);
 
             writeFileSync(filePath, req.file.buffer);
 

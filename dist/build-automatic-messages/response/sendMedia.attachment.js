@@ -43,7 +43,7 @@ const utils_1 = require("../../utils");
 function sendMedia(message, filename, voice, document) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const searchFilePath = path_1.default.join(__dirname, "../../auto-files", filename);
+            const searchFilePath = path_1.default.join(utils_1.filesPath, "/auto-files", filename);
             const mimeType = mime.getType(searchFilePath);
             const file = fs_1.default.readFileSync(searchFilePath);
             if (mimeType && file) {

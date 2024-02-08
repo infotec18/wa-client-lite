@@ -44,6 +44,8 @@ const node_fs_1 = require("node:fs");
 const node_path_1 = require("node:path");
 const node_crypto_1 = require("node:crypto");
 const axios_1 = __importDefault(require("axios"));
+const dotenv_1 = require("dotenv");
+(0, dotenv_1.config)();
 class AppRouter {
     constructor() {
         this.router = (0, express_1.Router)();
@@ -97,7 +99,7 @@ class AppRouter {
                     res.status(201).json(sentMessageWithFile);
                 }
                 else if (filename) {
-                    const filePath = (0, node_path_1.join)(__dirname, './files', filename);
+                    const filePath = (0, node_path_1.join)(utils_1.filesPath, '/media', filename);
                     const localfile = (0, node_fs_1.readFileSync)(filePath);
                     const mimeType = mime.getType(filePath);
                     const fileNameWithoutUUID = filename.split("_").slice(1).join("_");
@@ -139,8 +141,9 @@ class AppRouter {
     getFile(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                const filesPath = process.env.FILES_DIRECTORY;
                 const fileName = req.params.filename;
-                const searchFilePath = (0, node_path_1.join)(__dirname, "/files", fileName);
+                const searchFilePath = (0, node_path_1.join)(filesPath, "/media", fileName);
                 if (!(0, node_fs_1.existsSync)(searchFilePath)) {
                     return res.status(404).json({ message: "File not found" });
                 }
@@ -200,7 +203,8 @@ class AppRouter {
                 const filename = decodeURIComponent(req.file.originalname).split(".")[0];
                 const ext = decodeURIComponent(req.file.originalname).split(".")[1];
                 const generatedName = `${uuid}_${filename}.${ext}`;
-                const filePath = (0, node_path_1.join)(__dirname, "/files", generatedName);
+                const filesPath = process.env.FILES_DIRECTORY;
+                const filePath = (0, node_path_1.join)(filesPath, "/media", generatedName);
                 (0, node_fs_1.writeFileSync)(filePath, req.file.buffer);
                 res.status(201).json({ filename: generatedName });
             }

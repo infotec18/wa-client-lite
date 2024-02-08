@@ -1,5 +1,5 @@
 import { FieldPacket, ResultSetHeader } from "mysql2";
-import { Connection, createConnection } from "mysql2/promise";
+import { Connection, RowDataPacket, createConnection } from "mysql2/promise";
 import { logWithDate, messageParser } from "../utils"
 import WhatsappInstance from "../whatsapp";
 import getNumberErpId from "./getNumberErpId";
@@ -10,27 +10,36 @@ async function loadMessages(instance: WhatsappInstance) {
     try {
         const connection = await createConnection(instance.connectionParams);
         const chats = (await instance.client.getChats()).filter((c) => !c.isGroup);
+        let successfulInserts = 0;
+        let failedInserts = 0;
+        let alreadyExists = 0;
 
         for (let i = 0; i < chats.length; i++) {
-            try {
-                await processChat(connection, instance, chats, i);
-            } catch (err) {
-                logWithDate(`Failed to load contact messages for ${chats[i].id.user} =>`, err);
+            const result = await processChat(connection, instance, chats, i);
+
+            if (result) {
+                successfulInserts += result.successfulInserts;
+                failedInserts += result.failedInserts;
+                alreadyExists += result.alreadyExists;
             }
         }
+
+        console.log(`Success: ${successfulInserts} | Failed: ${failedInserts} | Already Exists: ${alreadyExists}`);
     } catch (err: any) {
         logWithDate("Load Messages Error =>", err)
     }
 }
 
-async function processChat(connection: any, instance: WhatsappInstance, chats: WAWebJS.Chat[], index: number) {
+async function processChat(connection: Connection, instance: WhatsappInstance, chats: WAWebJS.Chat[], index: number) {
     const chat = chats[index];
     const contact = await instance.client.getContactById(chat.id._serialized);
     logWithDate(`[${index + 1}/${chats.length}] Loading Contact Messages: ${chat.id.user}...`);
 
-    if (contact && connection) {
-        await processContactMessages(connection, chat, contact);
+    if (contact) {
+        return await processContactMessages(connection, chat, contact);
     }
+
+    return null;
 }
 
 async function processContactMessages(connection: Connection, chat: WAWebJS.Chat, contact: WAWebJS.Contact) {
@@ -41,54 +50,87 @@ async function processContactMessages(connection: Connection, chat: WAWebJS.Chat
 
         logWithDate(`Parsing ${messages.length} messages...`);
 
-        const parsedMessages = await parseMessages(messages, CODIGO_NUMERO);
+        return await parseAndSaveMessages(connection, messages, CODIGO_NUMERO);
 
-        for (const message of parsedMessages.filter(m => !!m)) {
-            if (message) {
-                await saveMessage(connection, message);
-            }
-        }
     } catch (err) {
         logWithDate(`Failed to insert messages for ${contact.id.user} =>`, err);
+        return null;
     }
 }
 
-async function parseMessages(messages: Array<WAWebJS.Message>, numberErpId: number) {
-    return Promise.all(messages.map(async (m) => {
+async function parseAndSaveMessages(connection: Connection, messages: Array<WAWebJS.Message>, numberErpId: number) {
+    let successfulInserts = 0;
+    let failedInserts = 0;
+    let alreadyExists = 0;
+
+    for (const message of messages) {
         try {
-            const parsedMessage = await messageParser(m);
+            const messageExist = await verifyMessageExist(connection, message.id._serialized);
 
-            return parsedMessage ? { ...parsedMessage, MENSAGEM: encodeURI(parsedMessage.MENSAGEM), CODIGO_NUMERO: numberErpId } : undefined;
+            if (messageExist) {
+                console.log(`Message already on database:`, message.id._serialized);
+                alreadyExists++;
+                continue;
+            }
+
+            console.log(`Parsing Message:`, message.type, message.id._serialized);
+            const parsedMessage = await messageParser(message);
+
+            if (!parsedMessage) {
+                failedInserts++;
+                continue;
+            }
+
+            const insertedMessage = await saveMessage(connection, { ...parsedMessage, CODIGO_NUMERO: numberErpId });
+
+            if (insertedMessage) {
+                successfulInserts++;
+            }
         } catch (err) {
-            console.error(`Failed to parse message ${m.id._serialized} =>`, err);
-
-            return undefined;
+            logWithDate(`Failed to parse message ${message.id._serialized} =>`, err);
+            failedInserts++;
         }
-    }));
+    };
+
+    return { successfulInserts, failedInserts, alreadyExists };
 }
 
-async function saveMessage(connection: any, message: ParsedMessage & { CODIGO_NUMERO: number }) {
+async function verifyMessageExist(connection: Connection, messageID: string) {
+    const SELECT_MESSAGE_QUERY = "SELECT * FROM w_mensagens WHERE ID = ?";
+    const [results]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_MESSAGE_QUERY, [messageID]);
+
+    return results[0];
+}
+
+async function saveMessage(connection: Connection, message: ParsedMessage & { CODIGO_NUMERO: number }) {
     try {
         if (message) {
             const { CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS } = message;
 
             const INSERT_MESSAGE_QUERY = "INSERT INTO w_mensagens (CODIGO_OPERADOR, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA, STATUS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+            console.log(`Inserting Message:`, message.TIPO, message.ID);
+
             const [results]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
                 INSERT_MESSAGE_QUERY,
-                [0, CODIGO_NUMERO, TIPO, MENSAGEM, FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]
+                [0, CODIGO_NUMERO, TIPO, encodeURI(MENSAGEM), FROM_ME, DATA_HORA, TIMESTAMP, ID, ID_REFERENCIA || null, STATUS]
             );
 
             const insertId = results.insertId;
 
             if (insertId && message.ARQUIVO) {
+                console.log(`Inserting File:`, message.ARQUIVO.TIPO, message.ARQUIVO.NOME_ARQUIVO);
                 const { NOME_ARQUIVO, TIPO, NOME_ORIGINAL, ARMAZENAMENTO } = message.ARQUIVO;
                 const INSERT_FILE_QUERY = "INSERT INTO w_mensagens_arquivos (CODIGO_MENSAGEM, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO) VALUES (?, ?, ?, ?, ?)";
-                await connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, NOME_ARQUIVO, NOME_ORIGINAL, ARMAZENAMENTO]);
+                await connection.execute(INSERT_FILE_QUERY, [insertId, TIPO, encodeURI(NOME_ARQUIVO), encodeURI(NOME_ORIGINAL), ARMAZENAMENTO]);
             }
+
+            return true;
         }
     } catch (err) {
         logWithDate(`Failed to save message id ${message?.ID} =>`, err);
+
+        return false;
     }
 }
 

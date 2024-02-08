@@ -21,6 +21,7 @@ class AppRouter {
         this.router.get("/clients", this.getClientStatus);
         this.router.get("/clients/:from/avatars/:to", this.getProfilePic);
         this.router.get("/clients/:from/load-messages", this.loadMessages);
+        this.router.get("/clients/:from/load-avatars", this.loadAvatars);
         this.router.get("/clients/:from/validate-number/:to", this.validateNumber);
         this.router.post("/clients/:from/messages/:to", upload.single("file"), this.sendMessage);
         this.router.post("/clients/:from/mass-messages/:from", upload.single("file"), this.sendMassMessages)
@@ -37,8 +38,24 @@ class AppRouter {
                 return;
             }
 
-            await instance.loadMessages();
-            res.status(200).json({ message: "Successfully loaded messages!" });
+            const result = await instance.loadMessages();
+            res.status(200).json(result);
+        } catch (err: any) {
+            res.status(500).send(err);
+        }
+    }
+
+    async loadAvatars(req: Request, res: Response) {
+        try {
+            const instance = instances.find(req.params.from);
+
+            if (!instance) {
+                res.status(404).send();
+                return;
+            }
+
+            const result = await instance.loadAvatars();
+            res.status(200).json(result)
         } catch (err: any) {
             res.status(500).send(err);
         }

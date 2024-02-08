@@ -10,6 +10,7 @@ async function loadMessages(instance: WhatsappInstance) {
     try {
         const connection = await createConnection(instance.connectionParams);
         const chats = (await instance.client.getChats()).filter((c) => !c.isGroup);
+
         let successfulInserts = 0;
         let failedInserts = 0;
         let alreadyExists = 0;
@@ -24,9 +25,15 @@ async function loadMessages(instance: WhatsappInstance) {
             }
         }
 
-        console.log(`Success: ${successfulInserts} | Failed: ${failedInserts} | Already Exists: ${alreadyExists}`);
+        connection.end();
+        connection.destroy();
+        logWithDate(`Success: ${successfulInserts} | Failed: ${failedInserts} | Already Exists: ${alreadyExists}`);
+
+        return ({ successfulInserts, failedInserts, alreadyExists });
     } catch (err: any) {
         logWithDate("Load Messages Error =>", err)
+
+        throw err;
     }
 }
 

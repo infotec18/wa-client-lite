@@ -6,6 +6,7 @@ import { DBAutomaticMessage, SendFileOptions } from "./types";
 import buildAutomaticMessage from "./build-automatic-messages";
 import getDBConnection from "./connection";
 import loadMessages from "./functions/loadMessages";
+import loadAvatars from "./functions/loadAvatars";
 
 class WhatsappInstance {
     public readonly requestURL: string;
@@ -169,9 +170,20 @@ class WhatsappInstance {
 
 
     public async loadMessages() {
-        loadMessages(this);
+        try {
+            return await loadMessages(this);
+        } catch (err) {
+            throw err;
+        }
     }
 
+    public async loadAvatars() {
+        try {
+            return await loadAvatars(this);
+        } catch (err) {
+            throw err;
+        }
+    }
 
     public async sendText(contact: string, text: string, quotedMessageId?: string) {
         try {
@@ -222,7 +234,7 @@ class WhatsappInstance {
             const pfpURL = await this.client.getProfilePicUrl(number + "@c.us");
             logWithDate("Get PFP URL Success!");
 
-            return pfpURL
+            return pfpURL || null;
         } catch (err) {
             logWithDate("Get PFP URL err =>", err);
             return null;

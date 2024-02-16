@@ -73,6 +73,8 @@ class AppRouter {
             const { text, referenceId, filename, isAudio } = req.body;
             const file = req.file;
 
+            console.log(req.body);
+
             if (file) {
                 const sentMessageWithFile = await instance.sendFile({
                     file: file.buffer,
@@ -86,7 +88,7 @@ class AppRouter {
 
                 res.status(201).json(sentMessageWithFile);
             } else if (filename) {
-
+                console.log("Filename => ", filename);
                 const filePath = join(filesPath, '/media', filename)
                 const localfile = readFileSync(filePath);
                 const mimeType = mime.getType(filePath);

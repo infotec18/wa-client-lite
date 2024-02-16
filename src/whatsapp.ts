@@ -7,6 +7,7 @@ import buildAutomaticMessage from "./build-automatic-messages";
 import getDBConnection from "./connection";
 import loadMessages from "./functions/loadMessages";
 import loadAvatars from "./functions/loadAvatars";
+import { schedule } from "node-cron";
 
 class WhatsappInstance {
     public readonly requestURL: string;
@@ -41,6 +42,15 @@ class WhatsappInstance {
                     "--no-zygote",
                     "--disable-gpu",
                 ]
+            }
+        });
+
+        schedule("30 7 * * *", async () => {
+            try {
+                await this.loadAvatars();
+                logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Avatars loaded successfully.`);
+            } catch (err: any) {
+                logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Avatars loading failure =>`, err);
             }
         });
 
@@ -90,6 +100,7 @@ class WhatsappInstance {
 
         this.client.on("message", (message) => this.onReceiveMessage(message));
         this.client.on("message_ack", (status) => this.onReceiveMessageStatus(status));
+        this.client.on("call", (call) => console.log(call));
     }
 
     private async buildBlockedNumbers() {

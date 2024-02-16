@@ -53,7 +53,7 @@ async function processContactMessages(connection: Connection, chat: WAWebJS.Chat
     try {
         const CODIGO_NUMERO = await getNumberErpId(connection, contact.id.user, contact.name);
         const blocked_types = ["e2e_notification", "notification_template", "call_log", "gp2"];
-        const messages = (await chat.fetchMessages({})).filter(m => !blocked_types.includes(m.type));
+        const messages = (await chat.fetchMessages({ limit: Infinity })).filter(m => !blocked_types.includes(m.type));
 
         logWithDate(`Parsing ${messages.length} messages...`);
 

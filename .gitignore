@@ -5,3 +5,5 @@ node_modules
 files/*
 package-lock.json
 temp/*
+dist/files/*
+dist/temp/*

@@ -37,17 +37,24 @@ async function messageParser(message: WAWebJS.Message) {
 
         if (message.hasMedia) {
             const messageMedia = await message.downloadMedia();
-            const mediaBuffer = Buffer.from(messageMedia.data, 'base64');
+            const isAudio: boolean = messageMedia.mimetype.includes("audio");
+            let mediaBuffer = Buffer.from(messageMedia.data, 'base64');
+
+            if (isAudio) {
+                mediaBuffer = await formatToOpusAudio(mediaBuffer);
+            }
+
             const uuid = randomUUID();
             const ARQUIVO_TIPO = messageMedia.mimetype;
-            const ext = extension(ARQUIVO_TIPO) || "dat";
+            const ext = isAudio ? "mp3" : extension(ARQUIVO_TIPO) || "dat";
             const ARQUIVO_NOME = messageMedia.filename ? `${uuid}_${messageMedia.filename}` : `${uuid}_unamed.${ext}`;
             const ARQUIVO_NOME_ORIGINAL = messageMedia.filename || ARQUIVO_NOME;
 
             const savePath = join(filesPath, "/media", ARQUIVO_NOME);
-
             await writeFile(savePath, mediaBuffer);
             await access(savePath);
+
+
 
             const serializedFile = {
                 NOME_ARQUIVO: ARQUIVO_NOME,

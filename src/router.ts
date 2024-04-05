@@ -225,22 +225,39 @@ class AppRouter {
 
         res.status(200).send();
 
+        const replaceVars = (message: string, vars: {
+            saudação_tempo: string;
+            cliente_razao: string;
+            cliente_cnpj: string;
+            contato_primeiro_nome: string;
+            contato_nome_completo: string;
+        }) => {
+            message = message.replaceAll(`@saudação_tempo`, vars.saudação_tempo);
+            message = message.replaceAll(`@cliente_razao`, vars.cliente_razao);
+            message = message.replaceAll(`@cliente_cnpj`, vars.cliente_cnpj);
+            message = message.replaceAll(`@contato_primeiro_nome`, vars.contato_primeiro_nome);
+            message = message.replaceAll(`@contato_nome_completo`, vars.contato_nome_completo);
+
+            return message;
+        }
+
         const sendMMType1 = async (contacts: string[], file?: Express.Multer.File) => {
             try {
                 const contact = contacts[0];
+                const contactVars = await instance.getContactVars(contact);
 
                 const fileName = file && decodeURIComponent(file.originalname);
 
                 const parsedMessage = file ?
                     await instance.sendFile({
-                        caption: text,
+                        caption: replaceVars(text, contactVars),
                         contact,
                         file: file.buffer,
                         fileName: fileName || file.originalname,
                         mimeType: file.mimetype
                     })
                     :
-                    await instance.sendText(contact, text);
+                    await instance.sendText(contact, replaceVars(text, contactVars));
 
                 await axios.post(`${instance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${instance.whatsappNumber}/${contact}`, parsedMessage);
                 const randomInterval = 5000 + (Math.random() * 5000);
@@ -260,19 +277,18 @@ class AppRouter {
         const sendMMType2 = async (contacts: string[], file?: { name: string, buffer: Buffer, mimetype: string }) => {
             try {
                 const contact = contacts[0];
-
-                console.log(file);
+                const contactVars = await instance.getContactVars(contact);
 
                 const parsedMessage = file ?
                     await instance.sendFile({
-                        caption: text,
+                        caption: replaceVars(text, contactVars),
                         contact,
                         file: file.buffer,
                         fileName: file.name,
                         mimeType: file.mimetype
                     })
                     :
-                    await instance.sendText(contact, text);
+                    await instance.sendText(contact, replaceVars(text, contactVars));
 
                 await axios.post(`${instance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${instance.whatsappNumber}/${contact}`, parsedMessage);
                 const randomInterval = 5000 + (Math.random() * 5000);

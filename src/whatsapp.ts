@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ConnectionOptions, FieldPacket, RowDataPacket } from "mysql2/promise";
+import { ConnectionOptions, FieldPacket, RowDataPacket, createConnection } from "mysql2/promise";
 import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
 import { DBAutomaticMessage, SendFileOptions } from "./types";
@@ -42,6 +42,10 @@ class WhatsappInstance {
                     "--no-zygote",
                     "--disable-gpu",
                 ]
+            },
+            webVersionCache: {
+                type: 'remote',
+                remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2410.1.html',
             }
         });
 
@@ -249,6 +253,58 @@ class WhatsappInstance {
         } catch (err) {
             logWithDate("Get PFP URL err =>", err);
             return null;
+        }
+    }
+
+
+
+    public async getContactVars(number: string) {
+        try {
+            const currentSaudation = () => {
+                const currentTime = new Date();
+                const hour = currentTime.getHours();
+
+                if (hour >= 5 && hour < 12) {
+                    return "Bom dia";
+                } else if (hour >= 12 && hour < 18) {
+                    return "Boa tarde";
+                } else {
+                    return "Boa noite";
+                }
+            }
+
+            const vars = {
+                "saudação_tempo": currentSaudation(),
+                "cliente_razao": "",
+                "cliente_cnpj": "",
+                "contato_primeiro_nome": "",
+                "contato_nome_completo": ""
+            };
+
+            const SELECT_QUERY = `
+            SELECT 
+                cli.RAZAO,
+                cli.CPF_CNPJ,
+                ct.NOME
+            FROM w_clientes_numeros ct
+            LEFT JOIN clientes cli ON cli.CODIGO = ct.CODIGO_CLIENTE
+            WHERE ct.NUMERO = ?
+            `;
+
+            const connection = await createConnection(this.connectionParams)
+
+            const [rows] = await connection.execute(SELECT_QUERY, [number]);
+            const findContact = (rows as Array<{ RAZAO: string, CNPJ: string, NOME: string }>)[0];
+
+            vars.cliente_razao = findContact.RAZAO;
+            vars.cliente_cnpj = findContact.CNPJ;
+            vars.contato_primeiro_nome = findContact.NOME.split(" ")[0];
+            vars.contato_nome_completo = findContact.NOME;
+
+            return vars;
+        } catch (err) {
+            logWithDate("Get Contact vars err =>", err);
+            throw err;
         }
     }
 

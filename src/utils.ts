@@ -93,7 +93,7 @@ function getAllEndpoints(router: Router, path: string) {
         router.stack.forEach((layer) => {
             if (layer.route) {
                 const subPath = layer.route.path;
-                const methods = Object.keys(layer.route.methods);
+                const methods = Object.keys((layer.route as any).methods);
 
                 methods.forEach((method) => {
                     endpoints.push(`${method.toUpperCase().padEnd(6, " ")} ${path}${subPath}`);

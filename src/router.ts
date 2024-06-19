@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import axios from "axios";
 import { config } from "dotenv";
+import { loadContacts } from "./functions/loadContacts";
 
 config();
 
@@ -22,6 +23,8 @@ class AppRouter {
         this.router.get("/clients/:from/avatars/:to", this.getProfilePic);
         this.router.get("/clients/:from/load-messages", this.loadMessages);
         this.router.get("/clients/:from/load-avatars", this.loadAvatars);
+        this.router.get("/clients/:from/load-contacts", this.loadContacts);
+        this.router.get("/clients/:from/groups", this.loadGroups);
         this.router.get("/clients/:from/validate-number/:to", this.validateNumber);
         this.router.post("/clients/:from/messages/:to", upload.single("file"), this.sendMessage);
         this.router.post("/clients/:from/mass-messages", upload.single("file"), this.sendMassMessages)
@@ -50,14 +53,45 @@ class AppRouter {
             const instance = instances.find(req.params.from);
 
             if (!instance) {
-                res.status(404).send();
-                return;
+                return res.status(404).send();
             }
 
             const result = await instance.loadAvatars();
             res.status(200).json(result)
         } catch (err: any) {
             res.status(500).send(err);
+        }
+    }
+
+    async loadGroups(req: Request, res: Response) {
+        try {
+            const instance = instances.find(req.params.from);
+
+            if (!instance) {
+                return res.status(404).send();
+            }
+
+            const groups = await instance.loadGroups();
+
+            return res.status(200).json({ groups });
+        } catch (err: any) {
+            res.status(500).send(err);
+        }
+    }
+
+    async loadContacts(req: Request, res: Response) {
+        try {
+            const instance = instances.find(req.params.from);
+
+            if (!instance) {
+                return res.status(404).send();
+            }
+
+            loadContacts(instance)
+
+            res.status(200).send();
+        } catch (err: any) {
+            res.status(404).send(err);
         }
     }
 

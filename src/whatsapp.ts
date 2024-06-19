@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ConnectionOptions, FieldPacket, RowDataPacket, createConnection } from "mysql2/promise";
+import { ConnectionOptions, FieldPacket, Pool, RowDataPacket, createPool } from "mysql2/promise";
 import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
 import { DBAutomaticMessage, SendFileOptions } from "./types";
@@ -14,12 +14,15 @@ class WhatsappInstance {
     public readonly client: Client;
     public readonly clientName: string;
     public readonly whatsappNumber;
+    public readonly pool: Pool;
     public isAuthenticated: boolean = false;
     public isReady: boolean = false;
     public connectionParams: ConnectionOptions;
     public blockedNumbers: Array<string> = [];
     public autoMessageCounters: Map<number, Array<{ number: string, count: number }>> = new Map();
+    public awaitingMessages: { numbers: Array<string>, messages: Array<WAWebJS.Message> } = { numbers: [], messages: [] }
     private readonly autoMessageCallbacks: Array<(message: WAWebJS.Message, contact: string) => void> = [];
+
 
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions) {
         this.clientName = clientName;
@@ -62,9 +65,21 @@ class WhatsappInstance {
         this.buildAutomaticMessages();
         this.buildClient();
         this.initialize();
+
+        this.pool = createPool(this.connectionParams);
     }
 
     private buildClient() {
+        this.client.on("disconnected", async (reason) => {
+            logWithDate("Disconnected =>", reason);
+            axios.post(`${this.requestURL}/notify`, { message: "disconnected", reason });
+        });
+
+        this.client.on("change_state", (state) => {
+            logWithDate("Changed State =>", state);
+            axios.post(`${this.requestURL}/notify`, { message: "changed state", state });
+        });
+
         this.client.on("qr", async (qr) => {
             try {
                 await axios.post(`${this.requestURL}/qr/${this.whatsappNumber}`, { qr });
@@ -103,6 +118,7 @@ class WhatsappInstance {
         });
 
         this.client.on("message", (message) => this.onReceiveMessage(message));
+        this.client.on("message_edit", (message) => this.onEditMessage(message));
         this.client.on("message_ack", (status) => this.onReceiveMessageStatus(status));
         this.client.on("call", (call) => console.log(call));
     }
@@ -163,11 +179,45 @@ class WhatsappInstance {
             if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                 const parsedMessage = await messageParser(message);
 
+                if (this.awaitingMessages.numbers.some(v => contactNumber === v)) {
+                    this.awaitingMessages.messages.push(message);
+                    this.awaitingMessages.numbers.filter(v => v !== contactNumber);
+                }
+
                 await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                 logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
             }
+            else if (chat.isGroup) {
+                const parsedMessage = await messageParser(message);
+                // Salvar mensagem
+                // Enviar mensagem para o back-end
+
+                console.log(parsedMessage);
+
+                console.log(chat.id);
+                console.log(chat.name);
+                console.log(await message.getContact());
+            }
         } catch (err: any) {
             logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
+        }
+    }
+
+    public async onEditMessage(message: WAWebJS.Message) {
+        try {
+
+            const TIMESTAMP = Number(`${message.timestamp}000`);
+
+            const changes = {
+                MENSAGEM: message.body,
+                DATA_HORA: new Date(TIMESTAMP),
+                TIMESTAMP
+            }
+
+            await axios.post(`${this.requestURL}/update_message/${message.id._serialized}`, changes);
+            logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message edit success => ${message.id._serialized}`);
+        } catch (err: any) {
+            logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message edit failure => `, err);
         }
     }
 
@@ -183,7 +233,6 @@ class WhatsappInstance {
         }
     }
 
-
     public async loadMessages() {
         try {
             return await loadMessages(this);
@@ -195,6 +244,17 @@ class WhatsappInstance {
     public async loadAvatars() {
         try {
             return await loadAvatars(this);
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    public async loadGroups() {
+        try {
+            const chats = await this.client.getChats();
+            const groups = chats.filter(chat => chat.isGroup);
+
+            return groups;
         } catch (err) {
             throw err;
         }
@@ -256,8 +316,6 @@ class WhatsappInstance {
         }
     }
 
-
-
     public async getContactVars(number: string) {
         try {
             const currentSaudation = () => {
@@ -291,9 +349,7 @@ class WhatsappInstance {
             WHERE ct.NUMERO = ?
             `;
 
-            const connection = await createConnection(this.connectionParams)
-
-            const [rows] = await connection.execute(SELECT_QUERY, [number]);
+            const [rows] = await this.pool.query(SELECT_QUERY, [number]);
             const findContact = (rows as Array<{ RAZAO: string, CNPJ: string, NOME: string }>)[0];
 
             vars.cliente_razao = findContact.RAZAO;

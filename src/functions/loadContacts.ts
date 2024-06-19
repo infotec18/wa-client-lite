@@ -2,7 +2,7 @@ import { RowDataPacket } from "mysql2";
 import WhatsappInstance from "../whatsapp";
 
 export async function loadContacts(instance: WhatsappInstance) {
-    const contacts = (await instance.client.getContacts()).slice(0, 20);
+    const contacts = await instance.client.getContacts();
 
     for (const contact of contacts) {
 

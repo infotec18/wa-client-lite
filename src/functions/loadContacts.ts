@@ -32,7 +32,7 @@ export async function loadContacts(instance: WhatsappInstance) {
 
         await instance.pool.query(
             "INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?);",
-            [findCustomer?.CODIGO || -1, contactName || contact.number]
+            [findCustomer?.CODIGO || -1, contactName || contact.number, contact.number]
         );
     }
 }

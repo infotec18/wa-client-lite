@@ -1,11 +1,4 @@
-import WAWebJS from "whatsapp-web.js";
-
-function outsideTimeInterval(
-    initialTime: string,
-    finalTime: string,
-    message: WAWebJS.Message,
-    cb: (message: WAWebJS.Message) => void,
-) {
+function outsideTimeInterval(initialTime: string, finalTime: string) {
     const utcMinus3Hours = new Date().getUTCHours() - 3;
     const currentHours = (utcMinus3Hours + 24) % 24; // Considerando 24 horas no dia
     const currentMinutes = new Date().getUTCMinutes();
@@ -19,8 +12,10 @@ function outsideTimeInterval(
     );
 
     if (isOutsideTimeInterval) {
-        cb(message);
+        return true;
     }
+
+    return false;
 }
 
 export default outsideTimeInterval;

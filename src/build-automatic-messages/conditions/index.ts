@@ -1,18 +1,17 @@
-import WAWebJS from "whatsapp-web.js";
 import outsideTimeInterval from "./outsideTimeInterval.condition";
 
-function buildCondition(condition: string, message: WAWebJS.Message, cb: (message: WAWebJS.Message) => void) {
+function checkCondition(condition: string): boolean {
     if (condition === "anyMessage") {
-        return () => cb(message);
+        return true; 1
     } else if (condition.includes("outsideTimeInterval")) {
         const values = condition.replace("outsideTimeInterval", "").replace("(", "").replace(")", "").replace(" ", "");
         const [initialTime, finalTime] = values.split(",");
 
-        return () => outsideTimeInterval(initialTime, finalTime, message, cb);
+        return outsideTimeInterval(initialTime, finalTime);
     }
 
-    return () => null;
+    return false
 
 }
 
-export default buildCondition;
+export default checkCondition;

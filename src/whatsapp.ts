@@ -3,11 +3,11 @@ import { ConnectionOptions, FieldPacket, Pool, RowDataPacket, createPool } from 
 import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, messageParser } from "./utils";
 import { DBAutomaticMessage, SendFileOptions } from "./types";
-import buildAutomaticMessage from "./build-automatic-messages";
 import getDBConnection from "./connection";
 import loadMessages from "./functions/loadMessages";
 import loadAvatars from "./functions/loadAvatars";
 import { schedule } from "node-cron";
+import runAutoMessage from "./build-automatic-messages";
 
 class WhatsappInstance {
     public readonly requestURL: string;
@@ -21,7 +21,7 @@ class WhatsappInstance {
     public blockedNumbers: Array<string> = [];
     public autoMessageCounters: Map<number, Array<{ number: string, count: number }>> = new Map();
     public awaitingMessages: { numbers: Array<string>, messages: Array<WAWebJS.Message> } = { numbers: [], messages: [] }
-    private readonly autoMessageCallbacks: Array<(message: WAWebJS.Message, contact: string) => void> = [];
+    private readonly autoMessages: Array<DBAutomaticMessage> = [];
 
 
     constructor(clientName: string, whatsappNumber: string, requestURL: string, connection: ConnectionOptions) {
@@ -136,14 +136,11 @@ class WhatsappInstance {
     private async buildAutomaticMessages() {
         const connection = await getDBConnection();
 
-        const SELECT_BOTS_QUERY = "SELECT * FROM automatic_messages WHERE instance_number = ?";
+        const SELECT_BOTS_QUERY = "SELECT * FROM automatic_messages WHERE instance_number = ? AND is_active = 1";
         const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_BOTS_QUERY, [this.whatsappNumber]);
         const autoMessages = rows as DBAutomaticMessage[];
 
-        autoMessages.forEach(am => {
-            const callback = buildAutomaticMessage(this, am);
-            this.autoMessageCallbacks.push(callback);
-        })
+        this.autoMessages.push(...autoMessages);
 
         connection.end();
         connection.destroy();
@@ -172,31 +169,15 @@ class WhatsappInstance {
             const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
             const isBlackListed = isBlackListedType || isBlackListedContact;
 
-            this.autoMessageCallbacks.forEach(cb => {
-                cb(message, contactNumber);
-            });
+            for (const autoMessage of this.autoMessages) {
+                await runAutoMessage(this, autoMessage, message, contactNumber);
+            }
 
             if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
                 const parsedMessage = await messageParser(message);
 
-                if (this.awaitingMessages.numbers.some(v => contactNumber === v)) {
-                    this.awaitingMessages.messages.push(message);
-                    this.awaitingMessages.numbers.filter(v => v !== contactNumber);
-                }
-
                 await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`, parsedMessage);
                 logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
-            }
-            else if (chat.isGroup) {
-                const parsedMessage = await messageParser(message);
-                // Salvar mensagem
-                // Enviar mensagem para o back-end
-
-                console.log(parsedMessage);
-
-                console.log(chat.id);
-                console.log(chat.name);
-                console.log(await message.getContact());
             }
         } catch (err: any) {
             logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);

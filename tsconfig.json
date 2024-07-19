@@ -16,7 +16,8 @@
     "skipLibCheck": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/deactivated/**/*.ts"
   ],
   "include": [
     "src/**/*.ts"

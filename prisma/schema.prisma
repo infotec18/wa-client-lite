@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  name          String    @id @unique
+  databaseName  String?   @map("database_name")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+  inactivatedAt DateTime? @map("inactivated_at")
+
+  Database Database?  @relation(fields: [databaseName], references: [name], onUpdate: Cascade, onDelete: Cascade)
+  Instance Instance[]
+
+  @@map("clients")
+}
+
+model Instance {
+  name          String    @id @unique
+  clientName    String    @map("client_name")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+  inactivatedAt DateTime? @map("inactivated_at")
+
+  Client           Client             @relation(fields: [clientName], references: [name], onUpdate: Cascade, onDelete: Cascade)
+  BlockedNumber    BlockedNumber[]
+  AutomaticMessage AutomaticMessage[]
+  Message          Message[]
+  SentMessage      SentMessage[]
+
+  @@map("whatsapp_instances")
+}
+
+model Database {
+  name      String    @id @unique
+  host      String
+  port      Int
+  user      String
+  password  String
+  database  String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  Client Client[]
+
+  @@map("database_instances")
+}
+
+model BlockedNumber {
+  number       String
+  instanceName String @map("instance_name")
+
+  Instance Instance @relation(fields: [instanceName], references: [name], onUpdate: Cascade, onDelete: Cascade)
+
+  @@unique([instanceName, number])
+  @@map("blocked_numbers")
+}
+
+model AutomaticMessage {
+  id             String  @id @default(uuid())
+  instanceName   String  @map("instance_name")
+  text           String  @db.Text
+  attachment     String?
+  attachmentType String? @map("attachment_type")
+  sendCondition  String  @map("send_condition")
+  sendLimit      Int     @default(1) @map("send_limit")
+  isActive       Boolean @default(true) @map("is_active")
+
+  Instance Instance @relation(fields: [instanceName], references: [name], onUpdate: Cascade, onDelete: Cascade)
+
+  @@map("automatic_messages")
+}
+
+model Message {
+  id               String    @id @default(uuid())
+  referenceId      String?   @map("reference_id")
+  inpulseId        String?   @map("inpulse_id")
+  type             String
+  text             String
+  timestamp        String
+  status           String
+  from             String
+  to               String
+  fileName         String?   @map("file_name")
+  fileOriginalname String?   @map("file_originalname")
+  fileMimetype     String?   @map("file_mimetype")
+  isMessageSync    Boolean   @map("is_message_sync")
+  isStatusSync     Boolean   @map("is_status_sync")
+  instanceName     String    @map("instance_name")
+  lastSyncRetry    DateTime? @map("last_sync_retry")
+  nextSyncRetry    DateTime? @map("next_sync_retry")
+  syncRetryCount   Int       @default(0) @map("sync_retry_count")
+
+  Instance Instance @relation(fields: [instanceName], references: [name], onUpdate: Cascade, onDelete: Cascade)
+
+  @@map("whatsapp_messages")
+}
+
+model SentMessage {
+  id               String    @id @default(uuid())
+  referenceId      String?   @map("reference_id")
+  inpulseId        String?   @map("inpulse_id")
+  type             String
+  text             String
+  timestamp        String
+  status           String
+  from             String
+  to               String
+  fileName         String?   @map("file_name")
+  fileOriginalname String?   @map("file_originalname")
+  fileMimetype     String?   @map("file_mimetype")
+  isMessageSync    Boolean   @map("is_message_sync")
+  isStatusSync     Boolean   @map("is_status_sync")
+  instanceName     String    @map("instance_name")
+  lastSyncRetry    DateTime? @map("last_sync_retry")
+  nextSyncRetry    DateTime? @map("next_sync_retry")
+  syncRetryCount   Int       @default(0) @map("sync_retry_count")
+
+  Instance Instance @relation(fields: [instanceName], references: [name], onUpdate: Cascade, onDelete: Cascade)
+
+  @@map("whatsapp_messages_sent")
+}

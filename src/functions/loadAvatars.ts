@@ -5,6 +5,10 @@ import { AttendanceWithContact } from "../types";
 
 async function loadAvatars(instance: WhatsappInstance) {
     try {
+        if(!instance.connectionParams) {
+            throw new Error("Connection not defined");
+        }
+
         const connection = await createConnection(instance.connectionParams);
         const runningAttendances = await getRunningAttendances(connection);
 

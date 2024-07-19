@@ -1,52 +1,66 @@
-import { FieldPacket, RowDataPacket } from "mysql2";
-import getDBConnection from "./connection";
 import WhatsappInstance from "./whatsapp";
-import { DBWhatsappInstance } from "./types";
 import "dotenv/config";
-
-const { REQUEST_URL } = process.env;
-
-const SELECT_INSTANCES_QUERY = `
-SELECT 
-    wi.*,
-    db.host AS db_host,
-    db.port AS db_port,
-    db.user AS db_user,
-    db.password AS db_pass,
-    db.database AS db_name
-FROM whatsapp_instances wi
-LEFT JOIN clients c ON c.name = wi.client_name
-LEFT JOIN database_connections db ON db.client_name = wi.client_name
-WHERE c.is_active AND wi.is_active;
-`;
-
-const getURL = (client: string) => REQUEST_URL?.replace(":clientName", client) || "";
+import prisma from "./prisma";
 
 class WhatsappInstances {
-    public instances: Array<WhatsappInstance> = [];
+	public instances: Array<WhatsappInstance> = [];
 
-    constructor() {
-        getDBConnection()
-            .then(async (c) => {
-                const [rows]: [Array<RowDataPacket>, Array<FieldPacket>] = await c.execute(SELECT_INSTANCES_QUERY);
-                const instances = rows as Array<DBWhatsappInstance>;
-                this.instances = instances.map(i => (
-                    new WhatsappInstance(
-                        i.client_name,
-                        i.number,
-                        getURL(i.client_name),
-                        { host: i.db_host, port: i.db_port, user: i.db_user, password: i.db_pass, database: i.db_name }
-                    )
-                ));
+	constructor() {
+		const { REQUEST_URL } = process.env;
 
-                await c.end();
-                c.destroy();
-            });
-    }
+		prisma.instance
+			.findMany({
+				include: {
+					AutomaticMessage: true,
+					BlockedNumber: true,
+					Client: {
+						select: {
+							name: true,
+							isActive: true,
+							Database: true
+						}
+					},
+					Message: {
+						where: {
+							isMessageSync: false
+						}
+					}
+				},
+				where: {
+					isActive: true,
+					Client: {
+						isActive: true
+					}
+				}
+			})
+			.then(async (instances) => {
+				this.instances = await Promise.all(
+					instances.map(async (i) => {
+						const connectionProps = i.Client?.Database && {
+							host: i.Client.Database.host,
+							port: i.Client.Database.port,
+							user: i.Client.Database.user,
+							password: i.Client.Database.password,
+							database: i.Client.Database.database
+						};
 
-    public find(number: string) {
-        return this.instances.find((i) => i.whatsappNumber == number);
-    }
+						return new WhatsappInstance(
+							i.clientName,
+							i.name,
+							REQUEST_URL?.replace(":clientName", i.clientName) || "",
+							i.BlockedNumber.map((b) => b.number),
+							i.AutomaticMessage,
+							i.Message,
+							connectionProps
+						);
+					})
+				);
+			});
+	}
+
+	public find(number: string) {
+		return this.instances.find((i) => i.name == number);
+	}
 }
 
 const instances = new WhatsappInstances();

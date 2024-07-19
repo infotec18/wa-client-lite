@@ -27,7 +27,7 @@ class AppRouter {
         this.router.get("/clients/:from/groups", this.loadGroups);
         this.router.get("/clients/:from/validate-number/:to", this.validateNumber);
         this.router.post("/clients/:from/messages/:to", upload.single("file"), this.sendMessage);
-        this.router.post("/clients/:from/mass-messages", upload.single("file"), this.sendMassMessages)
+        this.router.post("/clients/:from/mass-messages", upload.single("file"), this.sendMassMessages);
         this.router.get("/files/:filename", this.getFile);
         this.router.post("/files", upload.single("file"), this.uploadFile);
     }
@@ -203,7 +203,7 @@ class AppRouter {
                 const status = await instance.client.getState().catch(() => undefined);
                 const instanceData = {
                     client: instance.clientName,
-                    number: instance.whatsappNumber,
+                    number: instance.name,
                     auth: instance.isAuthenticated,
                     ready: instance.isReady,
                     status
@@ -293,7 +293,7 @@ class AppRouter {
                     :
                     await instance.sendText(contact, replaceVars(text, contactVars));
 
-                await axios.post(`${instance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${instance.whatsappNumber}/${contact}`, parsedMessage);
+                await axios.post(`${instance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${instance.name}/${contact}`, parsedMessage);
                 const randomInterval = 5000 + (Math.random() * 5000);
 
                 contacts.shift();
@@ -324,7 +324,7 @@ class AppRouter {
                     :
                     await instance.sendText(contact, replaceVars(text, contactVars));
 
-                await axios.post(`${instance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${instance.whatsappNumber}/${contact}`, parsedMessage);
+                await axios.post(`${instance.requestURL.replace("/wwebjs", "")}/custom-routes/receive_mm/${instance.name}/${contact}`, parsedMessage);
                 const randomInterval = 5000 + (Math.random() * 5000);
 
                 contacts.shift();

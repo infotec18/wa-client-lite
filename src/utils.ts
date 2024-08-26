@@ -8,6 +8,7 @@ import { spawn } from "node:child_process";
 import { Router } from "express";
 import { config } from "dotenv";
 import { extension } from "mime-types";
+import { ParsedMessage } from "./types";
 config();
 
 const filesPath = process.env.FILES_DIRECTORY!;
@@ -54,8 +55,6 @@ async function messageParser(message: WAWebJS.Message) {
             await writeFile(savePath, mediaBuffer);
             await access(savePath);
 
-
-
             const serializedFile = {
                 NOME_ARQUIVO: ARQUIVO_NOME,
                 TIPO: ARQUIVO_TIPO,
@@ -74,6 +73,25 @@ async function messageParser(message: WAWebJS.Message) {
 
         return null;
     }
+}
+
+function mapToParsedMessage(dbRow: any): ParsedMessage {
+    return {
+        ID: dbRow.ID,
+        MENSAGEM: dbRow.MENSAGEM || null,
+        ID_REFERENCIA: dbRow.ID_REFERENCIA || null,
+        TIPO: dbRow.TIPO || null,
+        TIMESTAMP: dbRow.TIMESTAMP || null,
+        FROM_ME: dbRow.FROM_ME === 1,
+        DATA_HORA: new Date(dbRow.DATA_HORA),
+        STATUS: dbRow.STATUS || null,
+        ARQUIVO: dbRow.ARQUIVO_TIPO ? {
+            TIPO: dbRow.ARQUIVO_TIPO,
+            NOME_ORIGINAL: dbRow.ARQUIVO_NOME_ORIGINAL || null,
+            NOME_ARQUIVO: dbRow.ARQUIVO_NOME || null,
+            ARMAZENAMENTO: dbRow.ARQUIVO_ARMAZENAMENTO || null,
+        } : null,
+    };
 }
 
 function logWithDate(str: string, error?: any) {
@@ -179,4 +197,4 @@ async function getOrCreateContact(connection: Connection, number: string, name: 
     return rows[0].CODIGO;
 }
 
-export { isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI, getOrCreateContact, filesPath };
+export { mapToParsedMessage, isMessageFromNow, messageParser, formatToOpusAudio, logWithDate, getAllEndpoints, isUUID, decodeSafeURI, getOrCreateContact, filesPath };

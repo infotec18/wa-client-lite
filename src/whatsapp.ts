@@ -226,7 +226,7 @@ class WhatsappInstance {
 				}
 			} catch (err: any) {
 				console.error(err?.response?.data);
-				logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.status : err.request ? err.request._currentUrl : err);
+				logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.data : err, message.id._serialized);
 			}
 		}, message.id._serialized);
 	}
@@ -464,7 +464,7 @@ class WhatsappInstance {
 			connection.destroy();
 			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message saved successfully => ${message.ID}`);
 		} catch (err) {
-			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Save message failure =>`, err);
+			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Save message failure =>`, err, message.ID);
 		}
 	}
 

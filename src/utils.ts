@@ -9,6 +9,8 @@ import { Router } from "express";
 import { config } from "dotenv";
 import { extension } from "mime-types";
 import { ParsedMessage } from "./types";
+import { mkdirp } from "mkdirp";
+
 config();
 
 const filesPath = process.env.FILES_DIRECTORY!;
@@ -29,7 +31,7 @@ async function messageParser(message: WAWebJS.Message) {
         const ID = message.id._serialized;
         const TIPO = message.type;
         const MENSAGEM = message.body;
-        const TIMESTAMP = Number(`${message.timestamp}000`);
+        const TIMESTAMP = `${message.timestamp}000`;
         const FROM_ME = message.fromMe;
 
         const STATUS = ["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][message.ack] || "ERROR";
@@ -94,11 +96,18 @@ function mapToParsedMessage(dbRow: any): ParsedMessage {
     };
 }
 
-function logWithDate(str: string, error?: any) {
+async function logWithDate(str: string, error?: any, id?: string) {
     const dateSring = new Date().toLocaleString();
 
     if (error) {
-        console.error(`${dateSring}: ${str}`, error);
+        try {
+            console.log(`${dateSring}: ${str}`, id);
+            process.env.ERRORS_DIRECTORY && await mkdirp(process.env.ERRORS_DIRECTORY + `/${id}`);
+            process.env.ERRORS_DIRECTORY && await writeFile(`${process.env.ERRORS_DIRECTORY}/${id}/${Date.now()}.json`, JSON.stringify(error, null, 2));
+
+        } catch (err) {
+            console.error(`${dateSring}: failed to save error`, err);
+        }
     } else {
         console.log(`${dateSring}: ${str}`);
     }

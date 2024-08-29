@@ -460,12 +460,12 @@ class WhatsappInstance {
 
 			const params = [
 				message.ID,
-				message.MENSAGEM || null,
+				message.MENSAGEM || "",
 				message.ID_REFERENCIA || null,
 				message.TIPO || null,
 				message.TIMESTAMP || null,
 				message.FROM_ME ? 1 : 0,
-				message.DATA_HORA || null,
+				message.DATA_HORA || message.TIMESTAMP ? new Date(message.TIMESTAMP) : null,
 				message.STATUS || null,
 				message.ARQUIVO?.TIPO || null,
 				message.ARQUIVO?.NOME_ORIGINAL || null,

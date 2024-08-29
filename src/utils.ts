@@ -79,13 +79,13 @@ async function messageParser(message: WAWebJS.Message) {
 function mapToParsedMessage(dbRow: any): ParsedMessage {
     return {
         ID: dbRow.ID,
-        MENSAGEM: dbRow.MENSAGEM || null,
+        MENSAGEM: dbRow.MENSAGEM || "",
         ID_REFERENCIA: dbRow.ID_REFERENCIA || null,
         TIPO: dbRow.TIPO || null,
         TIMESTAMP: dbRow.TIMESTAMP || null,
         FROM_ME: dbRow.FROM_ME === 1,
-        DATA_HORA: new Date(dbRow.DATA_HORA),
-        STATUS: dbRow.STATUS || null,
+        DATA_HORA: dbRow.DATA_HORA ? new Date(dbRow.DATA_HORA) : dbRow.TIMESTAMP ? new Date(+dbRow.TIMESTAMP) : null,
+        STATUS: dbRow.STATUS || "RECEIVED",
         ARQUIVO: dbRow.ARQUIVO_TIPO ? {
             TIPO: dbRow.ARQUIVO_TIPO,
             NOME_ORIGINAL: dbRow.ARQUIVO_NOME_ORIGINAL || null,

@@ -134,7 +134,7 @@ function mapToParsedMessage(dbRow: any): ParsedMessage {
 	const DATA_HORA = dbRow.DATA_HORA
 		? previousDate
 		: new Date(Number(dbRow.TIMESTAMP));
-		
+
 	return {
 		ID: dbRow.ID,
 		MENSAGEM: dbRow.MENSAGEM || "",
@@ -159,7 +159,7 @@ async function logWithDate(str: string, error?: any) {
 	const dateSring = new Date().toLocaleString();
 
 	if (error) {
-		console.log(`${dateSring}: ${str}`);
+		console.error(`${dateSring}: ${str}`, err);
 	} else {
 		console.log(`${dateSring}: ${str}`);
 	}

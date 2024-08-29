@@ -76,6 +76,8 @@ class Log<T> {
      */
     public async save(): Promise<void> {
         try {
+            this.finish();
+
             if (!this.finishedAt) {
                 throw new Error("Cannot save log before it is finished.");
             }

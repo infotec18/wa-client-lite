@@ -78,8 +78,7 @@ async function messageParser(message: WAWebJS.Message) {
 
 function mapToParsedMessage(dbRow: any): ParsedMessage {
     const previousDate = new Date(dbRow.DATA_HORA);
-    const DATA_HORA = previousDate.getTime() === 0 ? new Date(Number(dbRow.TIMESTAMP)) : previousDate;
-
+    const DATA_HORA = dbRow.DATA_HORA ? new Date(Number(dbRow.TIMESTAMP)) : previousDate;
 
     return {
         ID: dbRow.ID,

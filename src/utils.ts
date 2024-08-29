@@ -28,7 +28,7 @@ function isMessageFromNow(message: WAWebJS.Message) {
 	return timeDifference <= TWO_MINUTES;
 }
 
-async function messageParser(message: WAWebJS.Message) {
+async function parseMessage(message: WAWebJS.Message) {
 	try {
 		if (process.env.USE_LOCAL_DATE) {
 			message.timestamp = Date.now() / 1000;
@@ -130,11 +130,6 @@ function decodeParsedMessage(message: ParsedMessage): ParsedMessage {
 }
 
 function mapToParsedMessage(dbRow: any): ParsedMessage {
-	const previousDate = new Date(dbRow.DATA_HORA);
-	const DATA_HORA = dbRow.DATA_HORA
-		? previousDate
-		: new Date(Number(dbRow.TIMESTAMP));
-
 	return {
 		ID: dbRow.ID,
 		MENSAGEM: dbRow.MENSAGEM || "",
@@ -142,7 +137,7 @@ function mapToParsedMessage(dbRow: any): ParsedMessage {
 		TIPO: dbRow.TIPO || null,
 		TIMESTAMP: dbRow.TIMESTAMP || null,
 		FROM_ME: dbRow.FROM_ME === 1,
-		DATA_HORA,
+		DATA_HORA: new Date(dbRow.TIMESTAMP),
 		STATUS: dbRow.STATUS || "RECEIVED",
 		ARQUIVO: dbRow.ARQUIVO_TIPO
 			? {
@@ -280,7 +275,7 @@ async function getOrCreateContact(
 export {
 	mapToParsedMessage,
 	isMessageFromNow,
-	messageParser,
+	parseMessage as messageParser,
 	formatToOpusAudio,
 	logWithDate,
 	getAllEndpoints,

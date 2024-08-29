@@ -92,6 +92,7 @@ class Log<T> {
 				data: this.data,
 				lines: this.lines,
 				error: this.error,
+				errorMessage: this.error.message,
 			};
 
 			const fileName = `${Date.now()}.json`;

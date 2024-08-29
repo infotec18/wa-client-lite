@@ -31,7 +31,7 @@ function isMessageFromNow(message: WAWebJS.Message) {
 async function parseMessage(message: WAWebJS.Message) {
 	try {
 		if (process.env.USE_LOCAL_DATE) {
-			message.timestamp = Date.now() / 1000;
+			message.timestamp = Date.now();
 		}
 
 		const quotedMessage = await message.getQuotedMessage();

@@ -108,12 +108,8 @@ function encodeParsedMessage(message: ParsedMessage): ParsedMessage {
 		ARQUIVO: message.ARQUIVO
 			? {
 					...message.ARQUIVO,
-					NOME_ARQUIVO: encodeURI(
-						message.ARQUIVO.NOME_ARQUIVO
-					),
-					NOME_ORIGINAL: encodeURI(
-						message.ARQUIVO.NOME_ORIGINAL
-					),
+					NOME_ARQUIVO: encodeURI(message.ARQUIVO.NOME_ARQUIVO),
+					NOME_ORIGINAL: encodeURI(message.ARQUIVO.NOME_ORIGINAL),
 			  }
 			: null,
 	};
@@ -126,12 +122,8 @@ function decodeParsedMessage(message: ParsedMessage): ParsedMessage {
 		ARQUIVO: message.ARQUIVO
 			? {
 					...message.ARQUIVO,
-					NOME_ARQUIVO: decodeURI(
-						message.ARQUIVO.NOME_ARQUIVO
-					),
-					NOME_ORIGINAL: decodeURI(
-						message.ARQUIVO.NOME_ORIGINAL
-					),
+					NOME_ARQUIVO: decodeURI(message.ARQUIVO.NOME_ARQUIVO),
+					NOME_ORIGINAL: decodeURI(message.ARQUIVO.NOME_ORIGINAL),
 			  }
 			: null,
 	};
@@ -140,9 +132,9 @@ function decodeParsedMessage(message: ParsedMessage): ParsedMessage {
 function mapToParsedMessage(dbRow: any): ParsedMessage {
 	const previousDate = new Date(dbRow.DATA_HORA);
 	const DATA_HORA = dbRow.DATA_HORA
-		? new Date(Number(dbRow.TIMESTAMP))
-		: previousDate;
-
+		? previousDate
+		: new Date(Number(dbRow.TIMESTAMP));
+		
 	return {
 		ID: dbRow.ID,
 		MENSAGEM: dbRow.MENSAGEM || "",

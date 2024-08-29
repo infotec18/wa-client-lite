@@ -25,6 +25,10 @@ function isMessageFromNow(message: WAWebJS.Message) {
 
 async function messageParser(message: WAWebJS.Message) {
     try {
+        if (process.env.USE_LOCAL_DATE) {
+            message.timestamp = Date.now() / 1000;
+        }
+
         const quotedMessage = await message.getQuotedMessage();
         const ID_REFERENCIA = quotedMessage && quotedMessage.id._serialized;
         const ID = message.id._serialized;

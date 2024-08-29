@@ -96,6 +96,7 @@ class Log<T> {
             await mkdirp(logPath);
             await writeFile(this.errorFilePath, JSON.stringify(logData, null, 2));
         } catch (err) {
+            console.error(err);
             logWithDate("log save error:", err);
         }
     }

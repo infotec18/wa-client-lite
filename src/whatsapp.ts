@@ -501,8 +501,13 @@ class WhatsappInstance {
 			{ contact, text, quotedMessageId }
 		);
 		try {
+			log.event("started sendText function");
+
 			const numberId = await this.client.getNumberId(contact);
 			const chatId = numberId && numberId._serialized;
+			log.event("fetched contact's whatsapp id");
+			log.setData(data => ({ ...data, chatId }))
+
 
 			if (chatId) {
 				const sentMessage = await this.client.sendMessage(
@@ -510,9 +515,11 @@ class WhatsappInstance {
 					text,
 					{ quotedMessageId }
 				);
+				log.event("sent whatsapp message");
 				log.setData((data) => ({ ...data, sentMessage }));
 
 				const parsedMessage = await parseMessage(sentMessage);
+				log.event("parsed message");
 				log.setData((data) => ({ ...data, parsedMessage }));
 
 				if (parsedMessage) {

@@ -12,8 +12,7 @@ interface LogContext {
 
 interface LogEvent {
 	occurredAt: Date;
-	context: string;
-	message: string;
+	description: string;
 }
 
 class Log<T> {
@@ -59,13 +58,11 @@ class Log<T> {
 
 	/**
 	 * Adds an event to the log.
-	 * @param context - The context of the event.
-	 * @param message - The message of the event.
+	 * @param description - The description of the event.
 	 */
-	public event(context: string, message: string): void {
+	public event(description: string): void {
 		this.lines.push({
-			context,
-			message,
+			description: description,
 			occurredAt: new Date(),
 		});
 	}

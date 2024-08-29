@@ -344,7 +344,6 @@ class AppRouter {
         } else if (mode == "1") {
 
             if (filename) {
-                console.log(filename);
                 const decodedFilename = decodeURIComponent(filename);
                 const filePath = join(filesPath, '/media', decodedFilename);
                 const fileBuffer = readFileSync(filePath);

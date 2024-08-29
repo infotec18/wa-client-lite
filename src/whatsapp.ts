@@ -13,7 +13,7 @@ import {
 	isMessageFromNow,
 	logWithDate,
 	mapToParsedMessage,
-	messageParser,
+	parseMessage,
 } from "./utils";
 import { DBAutomaticMessage, ParsedMessage, SendFileOptions } from "./types";
 import getDBConnection from "./connection";
@@ -95,7 +95,7 @@ class WhatsappInstance {
 			}
 		});
 
-		schedule("*/20 * * * * *", () => this.syncMessagesWithServer());
+		schedule("*/2 * * * *", () => this.syncMessagesWithServer());
 
 		this.buildBlockedNumbers();
 		this.buildAutomaticMessages();
@@ -122,7 +122,7 @@ class WhatsappInstance {
 		while (this.unifiedQueue.length > 0) {
 			const task = this.unifiedQueue.shift();
 			if (task) {
-				console.log(
+				logWithDate(
 					`[${this.clientName} - ${this.whatsappNumber}] Processing ${type} ${id}...`
 				);
 				await task();
@@ -236,7 +236,6 @@ class WhatsappInstance {
 		this.client.on("message_ack", (status) =>
 			this.onReceiveMessageStatus(status)
 		);
-		this.client.on("call", (call) => console.log(call));
 	}
 
 	private async buildBlockedNumbers() {
@@ -330,7 +329,7 @@ class WhatsappInstance {
 					!isBlackListed &&
 					!isStatus
 				) {
-					const parsedMessage = await messageParser(message);
+					const parsedMessage = await parseMessage(message);
 					log.setData((data) => ({ ...data, parsedMessage }));
 
 					if (!parsedMessage) {
@@ -491,7 +490,7 @@ class WhatsappInstance {
 				);
 				log.setData((data) => ({ ...data, sentMessage }));
 
-				const parsedMessage = await messageParser(sentMessage);
+				const parsedMessage = await parseMessage(sentMessage);
 				log.setData((data) => ({ ...data, parsedMessage }));
 
 				if (parsedMessage) {
@@ -550,7 +549,7 @@ class WhatsappInstance {
 				sendAudioAsVoice: !!isAudio,
 			});
 			log.setData((data) => ({ ...data, sentMessage }));
-			const parsedMessage = await messageParser(sentMessage);
+			const parsedMessage = await parseMessage(sentMessage);
 			log.setData((data) => ({ ...data, parsedMessage }));
 
 			if (parsedMessage) {
@@ -690,9 +689,8 @@ class WhatsappInstance {
 				message.TIPO || null,
 				message.TIMESTAMP || null,
 				message.FROM_ME ? 1 : 0,
-				message.DATA_HORA || message.TIMESTAMP
-					? new Date(message.TIMESTAMP)
-					: null,
+				message.DATA_HORA || new Date(message.TIMESTAMP)
+					,
 				message.STATUS || null,
 				message.ARQUIVO?.TIPO || null,
 				message.ARQUIVO?.NOME_ORIGINAL || null,

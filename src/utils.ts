@@ -53,7 +53,7 @@ async function parseMessage(message: WAWebJS.Message) {
 			MENSAGEM,
 			TIMESTAMP,
 			FROM_ME,
-			DATA_HORA: new Date(TIMESTAMP),
+			DATA_HORA: new Date(+TIMESTAMP),
 			STATUS,
 		};
 
@@ -275,7 +275,7 @@ async function getOrCreateContact(
 export {
 	mapToParsedMessage,
 	isMessageFromNow,
-	parseMessage as messageParser,
+	parseMessage,
 	formatToOpusAudio,
 	logWithDate,
 	getAllEndpoints,

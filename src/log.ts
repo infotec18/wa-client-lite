@@ -131,7 +131,7 @@ class Log<T> {
 				const media = new WAWebJS.MessageMedia(
 					"application/json",
 					fileBase64,
-					this.errorFilePath.split("/").reverse()[0]
+					this.errorFilePath.split("\\").reverse()[0]
 				);
 
 				const numberId = await this.client.getNumberId(number);

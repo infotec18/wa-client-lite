@@ -300,7 +300,7 @@ class WhatsappInstance {
 	}
 
 	public async sendText(contact: string, text: string, quotedMessageId?: string) {
-		const log = new Log<any>(this.client, this.clientName, "send-file", `${Date.now()}`, { contact, text, quotedMessageId });
+		const log = new Log<any>(this.client, this.clientName, "send-text", `${Date.now()}`, { contact, text, quotedMessageId });
 		try {
 			const numberId = await this.client.getNumberId(contact);
 			const chatId = numberId && numberId._serialized;

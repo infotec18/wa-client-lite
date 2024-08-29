@@ -42,8 +42,8 @@ class WhatsappInstance {
 		messages: Array<WAWebJS.Message>;
 	} = { numbers: [], messages: [] };
 	private readonly autoMessages: Array<DBAutomaticMessage> = [];
-	private unifiedQueue: Array<() => Promise<void>> = [];
-	private processingUnifiedQueue: boolean = false;
+	private contactQueues: Map<string, Array<() => Promise<void>>> = new Map();
+	private contactProcessing: Map<string, boolean> = new Map();
 
 	constructor(
 		clientName: string,
@@ -95,7 +95,7 @@ class WhatsappInstance {
 			}
 		});
 
-		schedule("*/15 * * * *", () => this.syncMessagesWithServer());
+		schedule("*/2 * * * *", () => this.syncMessagesWithServer());
 
 		this.buildBlockedNumbers();
 		this.buildAutomaticMessages();
@@ -105,39 +105,50 @@ class WhatsappInstance {
 		this.pool = createPool(this.connectionParams);
 	}
 
-	private enqueueProcessing(
-		task: () => Promise<void>,
-		type: string,
-		id: string
-	) {
-		this.unifiedQueue.push(task);
-		this.processUnifiedQueue(type, id);
-	}
+	private async processContactQueue(contactNumber: string, type: string) {
+		if (this.contactProcessing.get(contactNumber)) return;
 
-	private async processUnifiedQueue(type: string, id: string) {
-		if (this.processingUnifiedQueue) return;
+		this.contactProcessing.set(contactNumber, true);
 
-		this.processingUnifiedQueue = true;
-
-		while (this.unifiedQueue.length > 0) {
-			const task = this.unifiedQueue.shift();
+		while (this.contactQueues.get(contactNumber)?.length) {
+			const task = this.contactQueues.get(contactNumber)!.shift();
 			if (task) {
 				logWithDate(
-					`[${this.clientName} - ${this.whatsappNumber}] Processing ${type} ${id}...`
+					`[${this.clientName} - ${this.whatsappNumber}] Processing ${type} for ${contactNumber}...`
 				);
 				await task();
 			}
 		}
 
-		this.processingUnifiedQueue = false;
+		this.contactProcessing.set(contactNumber, false);
 	}
 
-	public enqueueMessageProcessing(task: () => Promise<void>, id: string) {
-		this.enqueueProcessing(task, "message", id);
+	private enqueueProcessing(
+		task: () => Promise<void>,
+		type: string,
+		contactNumber: string
+	) {
+		if (!this.contactQueues.has(contactNumber)) {
+			this.contactQueues.set(contactNumber, []);
+			this.contactProcessing.set(contactNumber, false);
+		}
+
+		this.contactQueues.get(contactNumber)!.push(task);
+		this.processContactQueue(contactNumber, type);
 	}
 
-	public enqueueStatusProcessing(task: () => Promise<void>, id: string) {
-		this.enqueueProcessing(task, "status", id);
+	public enqueueMessageProcessing(
+		task: () => Promise<void>,
+		contactNumber: string
+	) {
+		this.enqueueProcessing(task, "message", contactNumber);
+	}
+
+	public enqueueStatusProcessing(
+		task: () => Promise<void>,
+		contactNumber: string
+	) {
+		this.enqueueProcessing(task, "status", contactNumber);
 	}
 
 	private buildClient() {
@@ -342,30 +353,30 @@ class WhatsappInstance {
 							`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`,
 							parsedMessage
 						)
-						.catch(() => null);
+						.catch((err: any) => {
+							console.error(err);
+							console.log(
+								err.response
+									? {
+											status: err.response.status,
+											data: err.response.data,
+									  }
+									: err.message
+							);
+						});
 
-					const savedMessage = await new Promise((res, rej) => {
-						setTimeout(async () => {
-							try {
-								const savedMessage = await this.pool
-									.query(
-										"SELECT * FROM w_mensagens WHERE ID = ?",
-										[parsedMessage!.ID]
-									)
-									.then(([rows]: any) => rows[0]);
+					const savedMessage = await this.pool
+						.query("SELECT * FROM w_mensagens WHERE ID = ?", [
+							parsedMessage!.ID,
+						])
+						.then(([rows]: any) => {
+							console.log(rows);
+							return rows[0];
+						});
 
-								res(savedMessage);
-							} catch (err) {
-								rej(err);
-							}
-						}, 10000);
-					});
+					console.log(savedMessage);
 
-					log.setData((data) => ({
-						...data,
-						savedMessage,
-					}));
-
+					log.setData((data) => ({ ...data, savedMessage }));
 					if (savedMessage) {
 						this.updateMessage(parsedMessage.ID, {
 							SYNC_MESSAGE: true,
@@ -381,13 +392,12 @@ class WhatsappInstance {
 				log.setError(err);
 				log.save();
 
-				console.error(err?.response?.data);
 				logWithDate(
 					`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`,
 					err.response ? err.response.data : err
 				);
 			}
-		}, message.id._serialized);
+		}, message.id.remote);
 	}
 
 	public async onReceiveMessageStatus(message: WAWebJS.Message) {

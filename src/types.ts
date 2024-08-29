@@ -37,7 +37,7 @@ export interface ParsedMessage {
     ID_REFERENCIA?: string;
     TIPO: string;
     MENSAGEM: string;
-    TIMESTAMP: string;
+    TIMESTAMP: number;
     FROM_ME: boolean;
     DATA_HORA: Date;
     STATUS: string;

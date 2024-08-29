@@ -95,7 +95,7 @@ class WhatsappInstance {
 			}
 		});
 
-		schedule("*/2 * * * *", () => this.syncMessagesWithServer());
+		schedule("*/15 * * * *", () => this.syncMessagesWithServer());
 
 		this.buildBlockedNumbers();
 		this.buildAutomaticMessages();
@@ -335,10 +335,7 @@ class WhatsappInstance {
 					if (!parsedMessage) {
 						throw new Error("Parse message failure");
 					}
-					await this.saveMessage(
-						parsedMessage,
-						contactNumber
-					);
+					await this.saveMessage(parsedMessage, contactNumber);
 
 					await axios
 						.post(
@@ -347,13 +344,28 @@ class WhatsappInstance {
 						)
 						.catch(() => null);
 
-					const savedMessage = await this.pool
-						.query("SELECT * FROM w_mensagens WHERE ID = ?", [
-							parsedMessage!.ID,
-						])
-						.then(([rows]: any) => rows[0]);
+					const savedMessage = await new Promise((res, rej) => {
+						setTimeout(async () => {
+							try {
+								const savedMessage = await this.pool
+									.query(
+										"SELECT * FROM w_mensagens WHERE ID = ?",
+										[parsedMessage!.ID]
+									)
+									.then(([rows]: any) => rows[0]);
 
-					log.setData((data) => ({ ...data, savedMessage }));
+								res(savedMessage);
+							} catch (err) {
+								rej(err);
+							}
+						}, 10000);
+					});
+
+					log.setData((data) => ({
+						...data,
+						savedMessage,
+					}));
+
 					if (savedMessage) {
 						this.updateMessage(parsedMessage.ID, {
 							SYNC_MESSAGE: true,
@@ -689,8 +701,7 @@ class WhatsappInstance {
 				message.TIPO || null,
 				message.TIMESTAMP || null,
 				message.FROM_ME ? 1 : 0,
-				message.DATA_HORA || new Date(message.TIMESTAMP)
-					,
+				message.DATA_HORA || new Date(message.TIMESTAMP),
 				message.STATUS || null,
 				message.ARQUIVO?.TIPO || null,
 				message.ARQUIVO?.NOME_ORIGINAL || null,

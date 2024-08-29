@@ -1,6 +1,6 @@
 import axios from "axios";
 import { ConnectionOptions, FieldPacket, Pool, RowDataPacket, createPool } from "mysql2/promise";
-import WAWebJS, { Client, LocalAuth, Status } from "whatsapp-web.js";
+import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, mapToParsedMessage, messageParser } from "./utils";
 import { DBAutomaticMessage, ParsedMessage, SendFileOptions } from "./types";
 import getDBConnection from "./connection";

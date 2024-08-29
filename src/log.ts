@@ -90,7 +90,7 @@ class Log<T> {
             };
 
             const fileName = `${Date.now()}.json`;
-            const logPath = path.join(process.env.LOGS_PATH, this.context.clientName, this.context.type, this.context.identifier);
+            const logPath = path.join(process.env.ERRORS_DIRECTORY, this.context.clientName, this.context.type, this.context.identifier);
             this.errorFilePath = path.join(logPath, fileName);
 
             await mkdirp(logPath);

@@ -9,7 +9,6 @@ import { Router } from "express";
 import { config } from "dotenv";
 import { extension } from "mime-types";
 import { ParsedMessage } from "./types";
-import { mkdirp } from "mkdirp";
 
 config();
 
@@ -96,21 +95,11 @@ function mapToParsedMessage(dbRow: any): ParsedMessage {
     };
 }
 
-async function logWithDate(str: string, error?: any, id?: string) {
+async function logWithDate(str: string, error?: any) {
     const dateSring = new Date().toLocaleString();
 
-    if (error && id) {
-        try {
-
-            process.env.ERRORS_DIRECTORY && await mkdirp(process.env.ERRORS_DIRECTORY + `/${id}`);
-            process.env.ERRORS_DIRECTORY && await writeFile(`${process.env.ERRORS_DIRECTORY}/${id}/${Date.now()}.json`, JSON.stringify(error, null, 2));
-
-        } catch (err) {
-            console.error(`${dateSring}: failed to save error`, err);
-        }
-    }
-    else if (error) {
-        console.log(`${dateSring}: ${str}`, id);
+    if (error) {
+        console.log(`${dateSring}: ${str}`);
     } else {
         console.log(`${dateSring}: ${str}`);
     }

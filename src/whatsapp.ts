@@ -1,6 +1,6 @@
 import axios from "axios";
 import { ConnectionOptions, FieldPacket, Pool, RowDataPacket, createPool } from "mysql2/promise";
-import WAWebJS, { Client, LocalAuth } from "whatsapp-web.js";
+import WAWebJS, { Client, LocalAuth, Status } from "whatsapp-web.js";
 import { formatToOpusAudio, isMessageFromNow, logWithDate, mapToParsedMessage, messageParser } from "./utils";
 import { DBAutomaticMessage, ParsedMessage, SendFileOptions } from "./types";
 import getDBConnection from "./connection";
@@ -8,6 +8,7 @@ import loadMessages from "./functions/loadMessages";
 import loadAvatars from "./functions/loadAvatars";
 import { schedule } from "node-cron";
 import runAutoMessage from "./build-automatic-messages";
+import Log from "./log";
 
 class WhatsappInstance {
 	public readonly requestURL: string;
@@ -191,6 +192,7 @@ class WhatsappInstance {
 
 	public async onReceiveMessage(message: WAWebJS.Message) {
 		this.enqueueMessageProcessing(async () => {
+			const log = new Log<any>(this.client, this.clientName, "send-file", `${Date.now()}`, { message });
 			try {
 				const blockedTypes = ["e2e_notification", "notification_template", "call_log", "gp2"];
 				const fromNow = isMessageFromNow(message);
@@ -208,6 +210,7 @@ class WhatsappInstance {
 
 				if (!chat.isGroup && fromNow && !message.isStatus && !isBlackListed && !isStatus) {
 					const parsedMessage = await messageParser(message);
+					log.setData(data => ({ ...data, parsedMessage }));
 
 					if (!parsedMessage) {
 						throw new Error("Parse message failure");
@@ -217,7 +220,7 @@ class WhatsappInstance {
 						.catch(() => null);
 
 					const savedMessage = await this.pool.query("SELECT * FROM w_mensagens WHERE ID = ?", [parsedMessage!.ID]).then(([rows]: any) => rows[0]);
-
+					log.setData(data => ({ ...data, savedMessage }));
 					if (savedMessage) {
 						this.updateMessage(parsedMessage.ID, { SYNC_MESSAGE: true, SYNC_STATUS: true });
 					}
@@ -225,6 +228,9 @@ class WhatsappInstance {
 					logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`);
 				}
 			} catch (err: any) {
+				log.setError(err);
+				log.save();
+
 				console.error(err?.response?.data);
 				logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`, err.response ? err.response.data : err, message.id._serialized);
 			}
@@ -294,13 +300,17 @@ class WhatsappInstance {
 	}
 
 	public async sendText(contact: string, text: string, quotedMessageId?: string) {
+		const log = new Log<any>(this.client, this.clientName, "send-file", `${Date.now()}`, { contact, text, quotedMessageId });
 		try {
 			const numberId = await this.client.getNumberId(contact);
 			const chatId = numberId && numberId._serialized;
 
 			if (chatId) {
 				const sentMessage = await this.client.sendMessage(chatId, text, { quotedMessageId });
+				log.setData(data => ({ ...data, sentMessage }));
+
 				const parsedMessage = await messageParser(sentMessage);
+				log.setData(data => ({ ...data, parsedMessage }));
 
 				if (parsedMessage) {
 					logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Send text success => ${parsedMessage.ID}`);
@@ -309,13 +319,17 @@ class WhatsappInstance {
 				return parsedMessage;
 			}
 
-		} catch (err) {
+		} catch (err: any) {
+			log.setError(err);
+			log.save()
 			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Send text failure =>`, err);
 		}
 	}
 
-	public async sendFile({ contact, file, mimeType, fileName, caption, quotedMessageId, isAudio }: SendFileOptions) {
+	public async sendFile(options: SendFileOptions) {
+		const log = new Log<any>(this.client, this.clientName, "send-file", `${Date.now()}`, { options });
 		try {
+			const { contact, file, mimeType, fileName, caption, quotedMessageId, isAudio } = options;
 			let formatedFile: unknown & any = file.toString("base64");
 
 			if (isAudio === "true") {
@@ -325,14 +339,18 @@ class WhatsappInstance {
 			const chatId = `${contact}@c.us`;
 			const media = new WAWebJS.MessageMedia(mimeType, formatedFile, fileName);
 			const sentMessage = await this.client.sendMessage(chatId, media, { caption, quotedMessageId, sendAudioAsVoice: !!isAudio });
+			log.setData(data => ({ ...data, sentMessage }));
 			const parsedMessage = await messageParser(sentMessage);
+			log.setData(data => ({ ...data, parsedMessage }));
 
 			if (parsedMessage) {
 				logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Send file success => ${parsedMessage.ID}`);
 			}
 
 			return parsedMessage;
-		} catch (err) {
+		} catch (err: any) {
+			log.setError(err);
+			log.save();
 			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Send file failure  =>`, err);
 		}
 	}
@@ -404,6 +422,7 @@ class WhatsappInstance {
 	}
 
 	private async saveMessage(message: ParsedMessage, from: string) {
+		const log = new Log<any>(this.client, this.clientName, "save-local-message", message.ID, { message });
 		try {
 			const query = `
 				INSERT INTO messages (
@@ -463,7 +482,9 @@ class WhatsappInstance {
 			await connection.end();
 			connection.destroy();
 			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Message saved successfully => ${message.ID}`);
-		} catch (err) {
+		} catch (err: any) {
+			log.setError(err);
+			log.save();
 			logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Save message failure =>`, err, message.ID);
 		}
 	}
@@ -480,20 +501,27 @@ class WhatsappInstance {
 
 			for (const message of rows) {
 				const { ID, SYNC_MESSAGE, SYNC_STATUS, STATUS } = message;
+				const log = new Log<any>(this.client, this.clientName, "sync-message", ID, {});
 				try {
 					// Sincronizar mensagem com o servidor
 					if (!SYNC_MESSAGE) {
-						await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${message.FROM}`, mapToParsedMessage(message))
-							.then(() => this.updateMessage(ID, { SYNC_MESSAGE: true, SYNC_STATUS: true }))
+						const parsedMessage = mapToParsedMessage(message);
+						log.setData(() => ({ parsedMessage }));
+
+						await axios.post(`${this.requestURL}/receive_message/${this.whatsappNumber}/${message.FROM}`, parsedMessage)
+							.then(() => this.updateMessage(ID, { SYNC_MESSAGE: true, SYNC_STATUS: true }));
 					}
 
 					// Sincronizar status da mensagem com o servidor
 					if (SYNC_MESSAGE && !SYNC_STATUS) {
+						log.setData(() => ({ status: STATUS }));
 						await axios.put(`${this.requestURL}/update_message/${message.FROM}`, { status: STATUS })
 							.then(() => this.updateMessage(ID, { SYNC_STATUS: true }))
 					}
 				} catch (err: any) {
-					logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Sync message failure =>`, err?.message);
+					log.setError(err);
+					log.save();
+					logWithDate(`[${this.clientName} - ${this.whatsappNumber}] Sync message failure =>`, err?.message, ID);
 				}
 			}
 

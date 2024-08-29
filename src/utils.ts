@@ -39,7 +39,10 @@ async function parseMessage(message: WAWebJS.Message) {
 		const ID = message.id._serialized;
 		const TIPO = message.type;
 		const MENSAGEM = message.body;
-		const TIMESTAMP = Number(`${message.timestamp}000`);
+		const TIMESTAMP = process.env.USE_LOCAL_DATE
+			? Date.now()
+			: Number(`${message.timestamp}000`);
+			
 		const FROM_ME = message.fromMe;
 
 		const STATUS =

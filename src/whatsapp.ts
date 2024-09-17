@@ -16,12 +16,12 @@ import {
 	parseMessage,
 } from "./utils";
 import { DBAutomaticMessage, ParsedMessage, SendFileOptions } from "./types";
-import getDBConnection from "./connection";
 import loadMessages from "./functions/loadMessages";
 import loadAvatars from "./functions/loadAvatars";
 import { schedule } from "node-cron";
 import runAutoMessage from "./build-automatic-messages";
 import Log from "./log";
+import whatsappClientPool from "./connection";
 
 class WhatsappInstance {
 	public readonly requestURL: string;
@@ -169,8 +169,7 @@ class WhatsappInstance {
 					{ qr }
 				);
 				logWithDate(
-					`[${this.clientName} - ${
-						this.whatsappNumber
+					`[${this.clientName} - ${this.whatsappNumber
 					}] QR success => ${qr.slice(0, 30)}...`
 				);
 			} catch (err: any) {
@@ -179,8 +178,8 @@ class WhatsappInstance {
 					err?.response
 						? err.response.status
 						: err.request
-						? err.request._currentUrl
-						: err
+							? err.request._currentUrl
+							: err
 				);
 			}
 		});
@@ -213,8 +212,8 @@ class WhatsappInstance {
 					err.response
 						? err.response.status
 						: err.request
-						? err.request._currentUrl
-						: err
+							? err.request._currentUrl
+							: err
 				);
 			}
 		});
@@ -234,8 +233,8 @@ class WhatsappInstance {
 					err.response
 						? err.response.status
 						: err.request
-						? err.request._currentUrl
-						: err
+							? err.request._currentUrl
+							: err
 				);
 			}
 		});
@@ -250,32 +249,23 @@ class WhatsappInstance {
 	}
 
 	private async buildBlockedNumbers() {
-		const connection = await getDBConnection();
-
 		const [rows]: [RowDataPacket[], FieldPacket[]] =
-			await connection.execute(
+			await whatsappClientPool.query(
 				`SELECT * FROM blocked_numbers WHERE instance_number = ?`,
 				[this.whatsappNumber]
 			);
-		this.blockedNumbers = rows.map((r) => r.blocked_number);
 
-		connection.end();
-		connection.destroy();
+		this.blockedNumbers = rows.map((r) => r.blocked_number);
 	}
 
 	private async buildAutomaticMessages() {
-		const connection = await getDBConnection();
-
 		const SELECT_BOTS_QUERY =
 			"SELECT * FROM automatic_messages WHERE instance_number = ? AND is_active = 1";
 		const [rows]: [RowDataPacket[], FieldPacket[]] =
-			await connection.execute(SELECT_BOTS_QUERY, [this.whatsappNumber]);
+			await whatsappClientPool.query(SELECT_BOTS_QUERY, [this.whatsappNumber]);
 		const autoMessages = rows as DBAutomaticMessage[];
 
 		this.autoMessages.push(...autoMessages);
-
-		connection.end();
-		connection.destroy();
 	}
 
 	public async initialize() {
@@ -290,8 +280,8 @@ class WhatsappInstance {
 				err.response
 					? err.response.status
 					: err.request
-					? err.request._currentUrl
-					: err
+						? err.request._currentUrl
+						: err
 			);
 		} finally {
 			await this.client.initialize();
@@ -358,9 +348,9 @@ class WhatsappInstance {
 							console.log(
 								err.response
 									? {
-											status: err.response.status,
-											data: err.response.data,
-									  }
+										status: err.response.status,
+										data: err.response.data,
+									}
 									: err.message
 							);
 						});
@@ -405,7 +395,7 @@ class WhatsappInstance {
 			try {
 				const status =
 					["PENDING", "SENT", "RECEIVED", "READ", "PLAYED"][
-						message.ack
+					message.ack
 					] || "ERROR";
 
 				await axios
@@ -426,8 +416,8 @@ class WhatsappInstance {
 					err.response
 						? err.response.status
 						: err.request
-						? err.request._currentUrl
-						: err
+							? err.request._currentUrl
+							: err
 				);
 				await this.updateMessage(message.id._serialized, {
 					SYNC_STATUS: false,
@@ -730,10 +720,8 @@ class WhatsappInstance {
 				from,
 			];
 
-			const connection = await getDBConnection();
-			await connection.execute(query, params);
-			await connection.end();
-			connection.destroy();
+			await whatsappClientPool.query(query, params);
+
 			logWithDate(
 				`[${this.clientName} - ${this.whatsappNumber}] Message saved successfully => ${message.ID}`
 			);
@@ -749,10 +737,8 @@ class WhatsappInstance {
 
 	private async syncMessagesWithServer() {
 		try {
-			const connection = await getDBConnection();
-
 			const [rows]: [RowDataPacket[], FieldPacket[]] =
-				await connection.execute(
+				await whatsappClientPool.query(
 					`
 				SELECT * FROM messages 
 				WHERE (SYNC_MESSAGE = 0 OR SYNC_STATUS = 0) 
@@ -814,9 +800,6 @@ class WhatsappInstance {
 					);
 				}
 			}
-
-			await connection.end();
-			connection.destroy();
 		} catch (err: any) {
 			logWithDate(
 				`[${this.clientName} - ${this.whatsappNumber}] Sync messages failure =>`,
@@ -843,10 +826,8 @@ class WhatsappInstance {
 				id,
 			];
 
-			const connection = await getDBConnection();
-			await connection.execute(query, params);
-			await connection.end();
-			connection.destroy();
+			await whatsappClientPool.query(query, params);
+
 			logWithDate(
 				`[${this.clientName} - ${this.whatsappNumber}] Message updated successfully => ${id}`
 			);

@@ -1,9 +1,3 @@
-import {
-	Connection,
-	FieldPacket,
-	ResultSetHeader,
-	RowDataPacket,
-} from "mysql2/promise";
 import WAWebJS from "whatsapp-web.js";
 import { join } from "node:path";
 import { access, readFile, mkdir, writeFile } from "node:fs/promises";
@@ -42,7 +36,7 @@ async function parseMessage(message: WAWebJS.Message) {
 		const TIMESTAMP = process.env.USE_LOCAL_DATE
 			? Date.now()
 			: Number(`${message.timestamp}000`);
-			
+
 		const FROM_ME = message.fromMe;
 
 		const STATUS =
@@ -110,10 +104,10 @@ function encodeParsedMessage(message: ParsedMessage): ParsedMessage {
 		MENSAGEM: encodeURI(message.MENSAGEM),
 		ARQUIVO: message.ARQUIVO
 			? {
-					...message.ARQUIVO,
-					NOME_ARQUIVO: encodeURI(message.ARQUIVO.NOME_ARQUIVO),
-					NOME_ORIGINAL: encodeURI(message.ARQUIVO.NOME_ORIGINAL),
-			  }
+				...message.ARQUIVO,
+				NOME_ARQUIVO: encodeURI(message.ARQUIVO.NOME_ARQUIVO),
+				NOME_ORIGINAL: encodeURI(message.ARQUIVO.NOME_ORIGINAL),
+			}
 			: null,
 	};
 }
@@ -124,10 +118,10 @@ function decodeParsedMessage(message: ParsedMessage): ParsedMessage {
 		MENSAGEM: decodeURI(message.MENSAGEM),
 		ARQUIVO: message.ARQUIVO
 			? {
-					...message.ARQUIVO,
-					NOME_ARQUIVO: decodeURI(message.ARQUIVO.NOME_ARQUIVO),
-					NOME_ORIGINAL: decodeURI(message.ARQUIVO.NOME_ORIGINAL),
-			  }
+				...message.ARQUIVO,
+				NOME_ARQUIVO: decodeURI(message.ARQUIVO.NOME_ARQUIVO),
+				NOME_ORIGINAL: decodeURI(message.ARQUIVO.NOME_ORIGINAL),
+			}
 			: null,
 	};
 }
@@ -144,11 +138,11 @@ function mapToParsedMessage(dbRow: any): ParsedMessage {
 		STATUS: dbRow.STATUS || "RECEIVED",
 		ARQUIVO: dbRow.ARQUIVO_TIPO
 			? {
-					TIPO: dbRow.ARQUIVO_TIPO,
-					NOME_ORIGINAL: dbRow.ARQUIVO_NOME_ORIGINAL || null,
-					NOME_ARQUIVO: dbRow.ARQUIVO_NOME || null,
-					ARMAZENAMENTO: dbRow.ARQUIVO_ARMAZENAMENTO || null,
-			  }
+				TIPO: dbRow.ARQUIVO_TIPO,
+				NOME_ORIGINAL: dbRow.ARQUIVO_NOME_ORIGINAL || null,
+				NOME_ARQUIVO: dbRow.ARQUIVO_NOME || null,
+				ARMAZENAMENTO: dbRow.ARQUIVO_ARMAZENAMENTO || null,
+			}
 			: null,
 	};
 }
@@ -251,30 +245,6 @@ function isUUID(str: string) {
 	return uuidRegex.test(str);
 }
 
-async function getOrCreateContact(
-	connection: Connection,
-	number: string,
-	name: string
-): Promise<number> {
-	const SELECT_NUMBER_QUERY =
-		"SELECT * FROM w_clientes_numeros WHERE NUMERO = ?";
-	const [rows]: [RowDataPacket[], FieldPacket[]] = await connection.execute(
-		SELECT_NUMBER_QUERY,
-		[number]
-	);
-
-	if (!rows[0]) {
-		const INSERT_NUMBER_QUERY =
-			"INSERT INTO w_clientes_numeros (CODIGO_CLIENTE, NOME, NUMERO) VALUES (?, ?, ?)";
-		const [result]: [ResultSetHeader, FieldPacket[]] =
-			await connection.execute(INSERT_NUMBER_QUERY, [-1, name, number]);
-
-		return result.insertId;
-	}
-
-	return rows[0].CODIGO;
-}
-
 export {
 	mapToParsedMessage,
 	isMessageFromNow,
@@ -284,7 +254,6 @@ export {
 	getAllEndpoints,
 	isUUID,
 	decodeSafeURI,
-	getOrCreateContact,
 	filesPath,
 	encodeParsedMessage,
 	decodeParsedMessage,

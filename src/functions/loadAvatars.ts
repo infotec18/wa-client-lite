@@ -1,12 +1,11 @@
-import { Connection, FieldPacket, RowDataPacket, createConnection } from "mysql2/promise";
+import { FieldPacket, Pool, RowDataPacket } from "mysql2/promise";
 import { logWithDate } from "../utils";
 import WhatsappInstance from "../whatsapp";
 import { AttendanceWithContact } from "../types";
 
 async function loadAvatars(instance: WhatsappInstance) {
     try {
-        const connection = await createConnection(instance.connectionParams);
-        const runningAttendances = await getRunningAttendances(connection);
+        const runningAttendances = await getRunningAttendances(instance.pool);
 
         let successfulUpdates = 0;
         let failedUpdates = 0;
@@ -24,7 +23,7 @@ async function loadAvatars(instance: WhatsappInstance) {
 
                 const avatar = await instance.getProfilePicture(attendance.CONTATO_NUMERO);
 
-                await updateAttendanceAvatar(connection, attendance.CODIGO, avatar);
+                await updateAttendanceAvatar(instance.pool, attendance.CODIGO, avatar);
                 successfulUpdates++;
             } catch {
                 failedUpdates++;
@@ -41,11 +40,11 @@ async function loadAvatars(instance: WhatsappInstance) {
     }
 }
 
-async function getRunningAttendances(connection: Connection) {
+async function getRunningAttendances(pool: Pool) {
     try {
         const SELECT_QUERY = "SELECT wa.*, ct.NUMERO AS CONTATO_NUMERO FROM w_atendimentos wa LEFT JOIN w_clientes_numeros ct ON ct.CODIGO = wa.CODIGO_NUMERO WHERE wa.CONCLUIDO = 0;";
 
-        const [results]: [RowDataPacket[], FieldPacket[]] = await connection.execute(SELECT_QUERY);
+        const [results]: [RowDataPacket[], FieldPacket[]] = await pool.query(SELECT_QUERY);
 
         return results as AttendanceWithContact[];
     } catch (err) {
@@ -55,11 +54,11 @@ async function getRunningAttendances(connection: Connection) {
     }
 }
 
-async function updateAttendanceAvatar(connection: Connection, attendanceId: number, avatarUrl: string | null) {
+async function updateAttendanceAvatar(pool: Pool, attendanceId: number, avatarUrl: string | null) {
     try {
         const UPDATE_QUERY = "UPDATE w_atendimentos SET AVATAR_URL = ? WHERE CODIGO = ?";
 
-        await connection.execute(UPDATE_QUERY, [avatarUrl, attendanceId]);
+        await pool.query(UPDATE_QUERY, [avatarUrl, attendanceId]);
     } catch (err) {
         logWithDate("Update Avatar Failure =>", err);
 

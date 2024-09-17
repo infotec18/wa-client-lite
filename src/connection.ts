@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { ConnectionOptions, createConnection } from "mysql2/promise";
+import { createPool } from "mysql2/promise";
+import { ConnectionOptions } from "mysql2/promise";
 
 const connectionProps: ConnectionOptions = {
     host: process.env.DATABASE_HOST!,
@@ -8,8 +9,6 @@ const connectionProps: ConnectionOptions = {
     database: process.env.DATABASE_DATABASE!,
 }
 
-async function getDBConnection() {
-    return await createConnection(connectionProps)
-}
+const whatsappClientPool = createPool(connectionProps);
 
-export default getDBConnection;
+export default whatsappClientPool;

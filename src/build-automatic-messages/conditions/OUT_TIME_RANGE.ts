@@ -1,4 +1,4 @@
-function outsideTimeInterval(initialTime: string, finalTime: string) {
+function isOutOfTimeRange(initialTime: string, finalTime: string) {
     const utcMinus3Hours = new Date().getUTCHours() - 3;
     const currentHours = (utcMinus3Hours + 24) % 24; // Considerando 24 horas no dia
     const currentMinutes = new Date().getUTCMinutes();
@@ -18,4 +18,4 @@ function outsideTimeInterval(initialTime: string, finalTime: string) {
     return false;
 }
 
-export default outsideTimeInterval;
+export default isOutOfTimeRange;

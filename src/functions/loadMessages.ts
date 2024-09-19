@@ -72,7 +72,6 @@ async function parseAndSaveMessages(pool: Pool, messages: Array<WAWebJS.Message>
             const messageExist = await verifyMessageExist(pool, message.id._serialized);
 
             if (messageExist) {
-                console.log(`Message already on database:`, message.id._serialized);
                 alreadyExists++;
                 continue;
             }

@@ -344,7 +344,6 @@ class WhatsappInstance {
 							parsedMessage
 						)
 						.catch((err: any) => {
-							console.error(err);
 							console.log(
 								err.response
 									? {
@@ -360,11 +359,8 @@ class WhatsappInstance {
 							parsedMessage!.ID,
 						])
 						.then(([rows]: any) => {
-							console.log(rows);
 							return rows[0];
 						});
-
-					console.log(savedMessage);
 
 					log.setData((data) => ({ ...data, savedMessage }));
 					if (savedMessage) {
@@ -720,7 +716,12 @@ class WhatsappInstance {
 				from,
 			];
 
-			await whatsappClientPool.query(query, params);
+			try {
+				await whatsappClientPool.query(query, params);
+			} catch (err) {
+				logWithDate(`[${this.clientName} - ${this.whatsappNumber}] MySQL Pool Query error =>`, err);
+				throw err;
+			}
 
 			logWithDate(
 				`[${this.clientName} - ${this.whatsappNumber}] Message saved successfully => ${message.ID}`

@@ -27,6 +27,7 @@ async function runAutoMessage(
         const condition = checkCondition(automaticMessage.send_condition);
 
         condition && await sendMessage(automaticMessage, instance, message);
+        contactCount.count++;
     }
 
 }

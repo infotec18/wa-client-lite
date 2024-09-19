@@ -2,14 +2,20 @@ function isDateEquals(dateString: string) {
     // Obtenha a data atual
     const currentDate = new Date();
 
-    // Converta a string de data no formato "YYYY-MM-DD" para um objeto Date
-    const [year, month, day] = dateString.split('-').map(Number);
-    const inputDate = new Date(year, month - 1, day); // Note que o mês é 0-indexado
+    // Converta a string de data no formato "YYYY-MM-DD" para um array
+    const [year, month, day] = dateString.split('-');
 
-    // Compare a data atual com a data fornecida
-    return currentDate.getFullYear() === inputDate.getFullYear() &&
-        currentDate.getMonth() === inputDate.getMonth() &&
-        currentDate.getDate() === inputDate.getDate();
+    // Verifica o ano
+    const isYearEqual = year === '*' || currentDate.getFullYear() === Number(year);
+
+    // Verifica o mês (ajustando para o formato 0-indexado)
+    const isMonthEqual = month === '*' || currentDate.getMonth() + 1 === Number(month);
+
+    // Verifica o dia
+    const isDayEqual = day === '*' || currentDate.getDate() === Number(day);
+
+    // Retorna true se todos os campos forem iguais ou aceitos como wildcard (*)
+    return isYearEqual && isMonthEqual && isDayEqual;
 }
 
 export default isDateEquals;

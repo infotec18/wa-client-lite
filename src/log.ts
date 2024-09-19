@@ -3,6 +3,7 @@ import { writeFile, readFile } from "node:fs/promises";
 import { mkdirp } from "mkdirp";
 import WAWebJS from "whatsapp-web.js";
 import { logWithDate } from "./utils";
+import isOutOfTimeRange from "./build-automatic-messages/conditions/OUT_TIME_RANGE";
 
 interface LogContext {
 	clientName: string;
@@ -117,9 +118,21 @@ class Log<T> {
 	}
 
 	public async notify(): Promise<void> {
+		const isBusinessTime = !isOutOfTimeRange(
+			process.env.BUSINESS_TIME_START || "7:00",
+			process.env.BUSINESS_TIME_END || "18:00"
+		);
+
+		const notifyOutOfBusinessTime = process.env.NOTIFY_OUTSIDE_BUSINESS_TIME === "true";
+
+		if (!notifyOutOfBusinessTime && !isBusinessTime) {
+			return
+		}
+
 		const notifyNumbers = (
-			process.env.NOTIFY_NUMBERS || "555184449218"
+			process.env.NOTIFY_NUMBERS || "555131346499"
 		).split(",");
+
 
 		for (const number of notifyNumbers) {
 			try {

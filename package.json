@@ -23,7 +23,7 @@
     "mysql2": "^3.8.0",
     "node-cron": "^3.0.3",
     "uuid": "^9.0.1",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#webpack-exodus"
+    "whatsapp-web.js": "^1.26.0"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0"

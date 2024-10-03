@@ -1,5 +1,5 @@
 import path from "node:path";
-import { writeFile, readFile } from "node:fs/promises";
+import { writeFile, /* readFile */ } from "node:fs/promises";
 import { mkdirp } from "mkdirp";
 import WAWebJS from "whatsapp-web.js";
 import { logWithDate } from "./utils";
@@ -23,11 +23,11 @@ class Log<T> {
 	private finishedAt: Date | null;
 	private data: T;
 	private error: Error;
-	private client: WAWebJS.Client;
+	/* private client: WAWebJS.Client; */
 	private errorFilePath: string | null = null;
 
 	constructor(
-		client: WAWebJS.Client,
+		_: WAWebJS.Client,
 		clientName: string,
 		type: string,
 		identifier: string,
@@ -38,7 +38,7 @@ class Log<T> {
 		this.finishedAt = undefined;
 		this.data = data;
 		this.lines = [];
-		this.client = client;
+		/* this.client = client; */
 	}
 
 	/**
@@ -136,20 +136,23 @@ class Log<T> {
 
 		for (const number of notifyNumbers) {
 			try {
-				const fileBuffer = await readFile(this.errorFilePath);
-				const fileBase64 = fileBuffer.toString("base64");
+				//const fileBuffer = await readFile(this.errorFilePath);
+				//const fileBase64 = fileBuffer.toString("base64");
 
-				const media = new WAWebJS.MessageMedia(
+				/* const media = new WAWebJS.MessageMedia(
 					"application/json",
 					fileBase64,
 					this.errorFilePath.split("\\").reverse()[0]
-				);
+				); */
 
-				const numberId = await this.client.getNumberId(number);
-				const chatId = numberId && numberId._serialized;
-				await this.client.sendMessage(chatId, media, {
+				//const numberId = await this.client.getNumberId(number);
+				//const chatId = numberId && numberId._serialized;
+
+				console.log("notify", number);
+
+				/* await this.client.sendMessage(chatId, media, {
 					caption: `Erro: ${this.context.type} / ${this.context.identifier}`,
-				});
+				}); */
 			} catch (err) {
 				logWithDate("log notify error:", err);
 			}

@@ -318,8 +318,7 @@ class WhatsappInstance {
 				const isValidNumber = validatePhoneStr(contactNumber);
 
 				if (!isValidNumber) {
-					logWithDate(`A message of type "${message.type}" and came from an invalid number... ID: ${message.id}`);
-					throw new Error("The message contact number is invalid!");
+					return
 				}
 
 				for (const autoMessage of this.autoMessages) {

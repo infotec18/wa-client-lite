@@ -136,19 +136,19 @@ class Log<T> {
 
 		for (const number of notifyNumbers) {
 			try {
-				const fileBuffer = await readFile(this.errorFilePath);
-				const fileBase64 = fileBuffer.toString("base64");
+				//const fileBuffer = await readFile(this.errorFilePath);
+				//const fileBase64 = fileBuffer.toString("base64");
 
-				const media = new WAWebJS.MessageMedia(
+				/* const media = new WAWebJS.MessageMedia(
 					"application/json",
 					fileBase64,
 					this.errorFilePath.split("\\").reverse()[0]
-				);
+				); */
 
-				const numberId = await this.client.getNumberId(number);
-				const chatId = numberId && numberId._serialized;
+				//const numberId = await this.client.getNumberId(number);
+				//const chatId = numberId && numberId._serialized;
 
-				console.log("notify");
+				console.log("notify", number);
 
 				/* await this.client.sendMessage(chatId, media, {
 					caption: `Erro: ${this.context.type} / ${this.context.identifier}`,

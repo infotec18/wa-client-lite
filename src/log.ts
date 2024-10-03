@@ -1,5 +1,5 @@
 import path from "node:path";
-import { writeFile, readFile } from "node:fs/promises";
+import { writeFile, /* readFile */ } from "node:fs/promises";
 import { mkdirp } from "mkdirp";
 import WAWebJS from "whatsapp-web.js";
 import { logWithDate } from "./utils";
@@ -23,11 +23,11 @@ class Log<T> {
 	private finishedAt: Date | null;
 	private data: T;
 	private error: Error;
-	private client: WAWebJS.Client;
+	/* private client: WAWebJS.Client; */
 	private errorFilePath: string | null = null;
 
 	constructor(
-		client: WAWebJS.Client,
+		_: WAWebJS.Client,
 		clientName: string,
 		type: string,
 		identifier: string,
@@ -38,7 +38,7 @@ class Log<T> {
 		this.finishedAt = undefined;
 		this.data = data;
 		this.lines = [];
-		this.client = client;
+		/* this.client = client; */
 	}
 
 	/**

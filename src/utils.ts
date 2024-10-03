@@ -245,6 +245,13 @@ function isUUID(str: string) {
 	return uuidRegex.test(str);
 }
 
+function validatePhoneStr(str: string) {
+	const hasInvalidDigits = /\D/.test(str);
+	const hasInvalidLength = str.length < 10;
+
+	return !hasInvalidDigits && !hasInvalidLength;
+}
+
 export {
 	mapToParsedMessage,
 	isMessageFromNow,
@@ -257,4 +264,5 @@ export {
 	filesPath,
 	encodeParsedMessage,
 	decodeParsedMessage,
+	validatePhoneStr
 };

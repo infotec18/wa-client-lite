@@ -14,6 +14,7 @@ import {
 	logWithDate,
 	mapToParsedMessage,
 	parseMessage,
+	validatePhoneStr,
 } from "./utils";
 import { DBAutomaticMessage, ParsedMessage, SendFileOptions } from "./types";
 import loadMessages from "./functions/loadMessages";
@@ -306,20 +307,28 @@ class WhatsappInstance {
 				];
 				const fromNow = isMessageFromNow(message);
 				const chat = await message.getChat();
-				const contactNumber = chat.id.user;
+				const contact = await chat.getContact()
+				const contactNumber = contact.number;
 
 				const isStatus = message.isStatus;
 				const isBlackListedType = blockedTypes.includes(message.type);
 				const isBlackListedContact =
 					this.blockedNumbers.includes(contactNumber);
 				const isBlackListed = isBlackListedType || isBlackListedContact;
+				const isValidNumber = validatePhoneStr(contactNumber);
+
+				if (!isValidNumber) {
+					logWithDate(`A message of type "${message.type}" and came from an invalid number... ID: ${message.id}`);
+					throw new Error("The message contact number is invalid!");
+				}
 
 				for (const autoMessage of this.autoMessages) {
 					await runAutoMessage(
 						this,
 						autoMessage,
 						message,
-						contactNumber
+						contactNumber,
+
 					);
 				}
 

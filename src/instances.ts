@@ -1,8 +1,8 @@
 import { FieldPacket, RowDataPacket } from "mysql2";
-import getDBConnection from "./connection";
 import WhatsappInstance from "./whatsapp";
 import { DBWhatsappInstance } from "./types";
 import "dotenv/config";
+import whatsappClientPool from "./connection";
 
 const { REQUEST_URL } = process.env;
 
@@ -26,22 +26,21 @@ class WhatsappInstances {
     public instances: Array<WhatsappInstance> = [];
 
     constructor() {
-        getDBConnection()
-            .then(async (c) => {
-                const [rows]: [Array<RowDataPacket>, Array<FieldPacket>] = await c.execute(SELECT_INSTANCES_QUERY);
-                const instances = rows as Array<DBWhatsappInstance>;
-                this.instances = instances.map(i => (
-                    new WhatsappInstance(
-                        i.client_name,
-                        i.number,
-                        getURL(i.client_name),
-                        { host: i.db_host, port: i.db_port, user: i.db_user, password: i.db_pass, database: i.db_name }
-                    )
-                ));
+        this.init();
+    }
 
-                await c.end();
-                c.destroy();
-            });
+    private async init() {
+        const [rows]: [Array<RowDataPacket>, Array<FieldPacket>] = await whatsappClientPool.query(SELECT_INSTANCES_QUERY);
+        const instances = rows as Array<DBWhatsappInstance>;
+
+        this.instances = instances.map(i => (
+            new WhatsappInstance(
+                i.client_name,
+                i.number,
+                getURL(i.client_name),
+                { host: i.db_host, port: i.db_port, user: i.db_user, password: i.db_pass, database: i.db_name }
+            )
+        ));
     }
 
     public find(number: string) {

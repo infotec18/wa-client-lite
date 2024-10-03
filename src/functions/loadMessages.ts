@@ -1,6 +1,6 @@
 import { FieldPacket, ResultSetHeader } from "mysql2";
 import { Pool, RowDataPacket } from "mysql2/promise";
-import { logWithDate, messageParser } from "../utils"
+import { logWithDate, parseMessage } from "../utils"
 import WhatsappInstance from "../whatsapp";
 import getNumberErpId from "./getNumberErpId";
 import WAWebJS from "whatsapp-web.js";
@@ -72,13 +72,12 @@ async function parseAndSaveMessages(pool: Pool, messages: Array<WAWebJS.Message>
             const messageExist = await verifyMessageExist(pool, message.id._serialized);
 
             if (messageExist) {
-                console.log(`Message already on database:`, message.id._serialized);
                 alreadyExists++;
                 continue;
             }
 
             console.log(`Parsing Message:`, message.type, message.id._serialized);
-            const parsedMessage = await messageParser(message);
+            const parsedMessage = await parseMessage(message);
 
             if (!parsedMessage) {
                 failedInserts++;

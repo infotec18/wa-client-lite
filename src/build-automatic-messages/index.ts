@@ -26,9 +26,8 @@ async function runAutoMessage(
         autoMessageCounts?.find(c => c.number === contact);
         const condition = checkCondition(automaticMessage.send_condition);
 
-        console.log(automaticMessage.send_condition, condition)
-
         condition && await sendMessage(automaticMessage, instance, message);
+        contactCount.count++;
     }
 
 }

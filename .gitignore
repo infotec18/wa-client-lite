@@ -7,3 +7,4 @@ package-lock.json
 temp/*
 dist/files/*
 dist/temp/*
+prisma

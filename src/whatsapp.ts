@@ -290,12 +290,16 @@ class WhatsappInstance {
 	}
 
 	public async onReceiveMessage(message: WAWebJS.Message) {
+		if (message.from == "status@broadcast") {
+			return
+		}
+
 		this.enqueueMessageProcessing(async () => {
 			const log = new Log<any>(
 				this.client,
 				this.clientName,
-				"send-file",
-				`${Date.now()}`,
+				"receive-message",
+				`${message.id._serialized}`,
 				{ message }
 			);
 			try {
@@ -308,6 +312,11 @@ class WhatsappInstance {
 				const fromNow = isMessageFromNow(message);
 				const chat = await message.getChat();
 				const contact = await chat.getContact()
+
+				if (!contact) {
+					return
+				}
+
 				const contactNumber = contact.number;
 
 				const isStatus = message.isStatus;
@@ -334,7 +343,6 @@ class WhatsappInstance {
 				if (
 					!chat.isGroup &&
 					fromNow &&
-					!message.isStatus &&
 					!isBlackListed &&
 					!isStatus
 				) {

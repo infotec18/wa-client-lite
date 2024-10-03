@@ -147,9 +147,12 @@ class Log<T> {
 
 				const numberId = await this.client.getNumberId(number);
 				const chatId = numberId && numberId._serialized;
-				await this.client.sendMessage(chatId, media, {
+
+				console.log("notify");
+
+				/* await this.client.sendMessage(chatId, media, {
 					caption: `Erro: ${this.context.type} / ${this.context.identifier}`,
-				});
+				}); */
 			} catch (err) {
 				logWithDate("log notify error:", err);
 			}

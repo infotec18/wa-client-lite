@@ -294,112 +294,111 @@ class WhatsappInstance {
 			return
 		}
 
-		this.enqueueMessageProcessing(async () => {
-			const log = new Log<any>(
-				this.client,
-				this.clientName,
-				"receive-message",
-				`${message.id._serialized}`,
-				{ message }
-			);
-			try {
-				const blockedTypes = [
-					"e2e_notification",
-					"notification_template",
-					"call_log",
-					"gp2",
-				];
-				const fromNow = isMessageFromNow(message);
-				const chat = await message.getChat();
-				const contact = await chat.getContact()
+		const log = new Log<any>(
+			this.client,
+			this.clientName,
+			"receive-message",
+			`${message.id._serialized}`,
+			{ message }
+		);
 
-				if (!contact) {
-					return
-				}
+		try {
+			const blockedTypes = [
+				"e2e_notification",
+				"notification_template",
+				"call_log",
+				"gp2",
+			];
 
-				const contactNumber = contact.number;
+			const fromNow = isMessageFromNow(message);
+			const chat = await message.getChat();
+			const contact = await chat.getContact()
 
-				const isStatus = message.isStatus;
-				const isBlackListedType = blockedTypes.includes(message.type);
-				const isBlackListedContact =
-					this.blockedNumbers.includes(contactNumber);
-				const isBlackListed = isBlackListedType || isBlackListedContact;
-				const isValidNumber = validatePhoneStr(contactNumber);
+			if (!contact) {
+				return
+			}
 
-				if (!isValidNumber) {
-					return
-				}
+			const contactNumber = contact.number;
 
-				for (const autoMessage of this.autoMessages) {
-					await runAutoMessage(
-						this,
-						autoMessage,
-						message,
-						contactNumber,
+			const isStatus = message.isStatus;
+			const isBlackListedType = blockedTypes.includes(message.type);
+			const isBlackListedContact = this.blockedNumbers.includes(contactNumber);
+			const isBlackListed = isBlackListedType || isBlackListedContact;
+			const isValidNumber = validatePhoneStr(contactNumber);
 
-					);
-				}
+			if (!isValidNumber) {
+				return
+			}
 
-				if (
-					!chat.isGroup &&
-					fromNow &&
-					!isBlackListed &&
-					!isStatus
-				) {
-					const parsedMessage = await parseMessage(message);
-					log.setData((data) => ({ ...data, parsedMessage }));
+			for (const autoMessage of this.autoMessages) {
+				await runAutoMessage(
+					this,
+					autoMessage,
+					message,
+					contactNumber,
 
-					if (!parsedMessage) {
-						throw new Error("Parse message failure");
-					}
-					await this.saveMessage(parsedMessage, contactNumber);
-
-					await axios
-						.post(
-							`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`,
-							parsedMessage
-						)
-						.catch((err: any) => {
-							console.log(
-								err.response
-									? {
-										status: err.response.status,
-										data: err.response.data,
-									}
-									: err.message
-							);
-						});
-
-					const savedMessage = await this.pool
-						.query("SELECT * FROM w_mensagens WHERE ID = ?", [
-							parsedMessage!.ID,
-						])
-						.then(([rows]: any) => {
-							return rows[0];
-						});
-
-					log.setData((data) => ({ ...data, savedMessage }));
-					if (savedMessage) {
-						this.updateMessage(parsedMessage.ID, {
-							SYNC_MESSAGE: true,
-							SYNC_STATUS: true,
-						});
-					}
-
-					logWithDate(
-						`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`
-					);
-				}
-			} catch (err: any) {
-				log.setError(err);
-				log.save();
-
-				logWithDate(
-					`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`,
-					err.response ? err.response.data : err
 				);
 			}
-		}, message.id.remote);
+
+			if (
+				!chat.isGroup &&
+				fromNow &&
+				!isBlackListed &&
+				!isStatus
+			) {
+				const parsedMessage = await parseMessage(message);
+				log.setData((data) => ({ ...data, parsedMessage }));
+
+				if (!parsedMessage) {
+					throw new Error("Parse message failure");
+				}
+				await this.saveMessage(parsedMessage, contactNumber);
+
+				await axios
+					.post(
+						`${this.requestURL}/receive_message/${this.whatsappNumber}/${contactNumber}`,
+						parsedMessage
+					)
+					.catch((err: any) => {
+						console.log(
+							err.response
+								? {
+									status: err.response.status,
+									data: err.response.data,
+								}
+								: err.message
+						);
+					});
+
+				const savedMessage = await this.pool
+					.query("SELECT * FROM w_mensagens WHERE ID = ?", [
+						parsedMessage!.ID,
+					])
+					.then(([rows]: any) => {
+						return rows[0];
+					});
+
+				log.setData((data) => ({ ...data, savedMessage }));
+				if (savedMessage) {
+					this.updateMessage(parsedMessage.ID, {
+						SYNC_MESSAGE: true,
+						SYNC_STATUS: true,
+					});
+				}
+
+				logWithDate(
+					`[${this.clientName} - ${this.whatsappNumber}] Message success => ${message.id._serialized}`
+				);
+			}
+		} catch (err: any) {
+			log.setError(err);
+			log.save();
+
+			logWithDate(
+				`[${this.clientName} - ${this.whatsappNumber}] Message failure =>`,
+				err.response ? err.response.data : err
+			);
+		}
 	}
 
 	public async onReceiveMessageStatus(message: WAWebJS.Message) {

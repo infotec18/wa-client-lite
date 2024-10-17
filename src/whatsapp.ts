@@ -336,7 +336,6 @@ class WhatsappInstance {
 					autoMessage,
 					message,
 					contactNumber,
-
 				);
 			}
 

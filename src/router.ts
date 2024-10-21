@@ -201,10 +201,13 @@ class AppRouter {
 				? fileName.split("_").slice(1).join("_")
 				: fileName;
 
+			const sanitizedFileName = fileNameWithoutUUID.replace(/[^a-zA-Z0-9-_ ]/g, "");
+
 			res.setHeader(
 				"Content-Disposition",
-				`inline; filename="${fileNameWithoutUUID}"`
+				`inline; filename="${sanitizedFileName}"`
 			);
+
 			mimeType && res.setHeader("Content-Type", mimeType);
 			res.end(file);
 
@@ -327,23 +330,22 @@ class AppRouter {
 
 				const parsedMessage = file
 					? await instance.sendFile({
-							caption: replaceVars(text, contactVars),
-							contact,
-							file: file.buffer,
-							fileName: fileName || file.originalname,
-							mimeType: file.mimetype,
-					  })
+						caption: replaceVars(text, contactVars),
+						contact,
+						file: file.buffer,
+						fileName: fileName || file.originalname,
+						mimeType: file.mimetype,
+					})
 					: await instance.sendText(
-							contact,
-							replaceVars(text, contactVars)
-					  );
+						contact,
+						replaceVars(text, contactVars)
+					);
 
 				await axios.post(
 					`${instance.requestURL.replace(
 						"/wwebjs",
 						""
-					)}/custom-routes/receive_mm/${
-						instance.whatsappNumber
+					)}/custom-routes/receive_mm/${instance.whatsappNumber
 					}/${contact}`,
 					parsedMessage
 				);
@@ -371,23 +373,22 @@ class AppRouter {
 
 				const parsedMessage = file
 					? await instance.sendFile({
-							caption: replaceVars(text, contactVars),
-							contact,
-							file: file.buffer,
-							fileName: file.name,
-							mimeType: file.mimetype,
-					  })
+						caption: replaceVars(text, contactVars),
+						contact,
+						file: file.buffer,
+						fileName: file.name,
+						mimeType: file.mimetype,
+					})
 					: await instance.sendText(
-							contact,
-							replaceVars(text, contactVars)
-					  );
+						contact,
+						replaceVars(text, contactVars)
+					);
 
 				await axios.post(
 					`${instance.requestURL.replace(
 						"/wwebjs",
 						""
-					)}/custom-routes/receive_mm/${
-						instance.whatsappNumber
+					)}/custom-routes/receive_mm/${instance.whatsappNumber
 					}/${contact}`,
 					parsedMessage
 				);
